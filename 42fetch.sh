@@ -1,11 +1,82 @@
 #!/bin/sh
 
 logoName="ubuntu"
+PROGRAM_NAME="42fetch"
+
+command_exists()
+	command -v "$1" > /dev/null 2>&1
+
+printhelp()
+{
+    echo "Usage: $0 [-l=value | --logo=value] [-h|--help]"
+}
+
 for arg in "$@"; do
-	case "$arg" in
-		--logo=*) logoName="${arg#--logo=}" ;;
-	esac
+    case "$arg" in
+        --logo)
+            echo "Error: --logo must use the format --logo=value"
+            exit 1
+            ;;
+        --logo?*)
+            case "$arg" in
+                --logo=*) ;;
+                *)
+                    printhelp
+                    exit 1
+                    ;;
+            esac
+            ;;
+    esac
 done
+
+TEMP=$(getopt -o hl: --long logo:,help -- "$@") 2>/dev/null
+
+if [ $? != 0 ]; then
+    for arg in "$@"; do
+        echo "$PROGRAM_NAME: unrecognized option '$arg'" >&2
+        echo "Try '$PROGRAM_NAME -h|--help' for more information" >&2
+        exit 1
+    done
+    echo "$PROGRAM_NAME: unknown error parsing options" >&2
+    exit 1
+fi
+
+eval set -- "$TEMP"
+
+while true; do
+    case "$1" in
+        -l)
+            if echo "$2" | grep -qv '^='; then
+                echo "Error: -l must use the format -l=value"
+                printhelp
+                exit 1
+            fi
+            logo=$(echo "$2" | sed 's/^=//')
+            shift 2
+            ;;
+        --logo)
+            logo="$2"
+            shift 2
+            ;;
+        -h|--help)
+            printhelp
+            exit 0
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+if [ -z "$logo" ]; then
+    logo=blahaj
+fi
+
+echo "Logo: $logo"
 
 get_max_line_length() {
 	local file="$1"
@@ -21,18 +92,15 @@ get_max_line_length() {
 	echo "$max_length"
 }
 
-if [ -z "$logoName" ]; then
+if [ -z "$logo" ]; then
 	startColumn=0
-elif [ "$logoName" = "blahaj" ] || [ "$logoName" = "blåhaj" ]; then
+elif [ "$logo" = "blahaj" ] || [ "$logo" = "blåhaj" ]; then
 	startColumn=$(get_max_line_length "logo/Blåhaj.txt")
-elif [ "$logoName" = "ubuntu" ]; then
+elif [ "$logo" = "ubuntu" ]; then
 	startColumn=$(get_max_line_length "logo/Ubuntu.txt")
 fi
 
 echo "startColumn: $startColumn"
-
-command_exists()
-	command -v "$1" > /dev/null 2>&1
 
 get_cpu()
 {

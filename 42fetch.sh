@@ -1,12 +1,43 @@
 #!/bin/sh
 
+logoName="ubuntu"
+for arg in "$@"; do
+	case "$arg" in
+		--logo=*) logoName="${arg#--logo=}" ;;
+	esac
+done
+
+get_max_line_length() {
+	local file="$1"
+	local max_length=0
+
+	while IFS= read -r line; do
+		local length=${#line}
+		if [ "$length" -gt "$max_length" ]; then
+			max_length=$length
+		fi
+	done < "$file"
+
+	echo "$max_length"
+}
+
+if [ -z "$logoName" ]; then
+	startColumn=0
+elif [ "$logoName" = "blahaj" ] || [ "$logoName" = "blåhaj" ]; then
+	startColumn=$(get_max_line_length "logo/Blåhaj.txt")
+elif [ "$logoName" = "ubuntu" ]; then
+	startColumn=$(get_max_line_length "logo/Ubuntu.txt")
+fi
+
+echo "startColumn: $startColumn"
+
 command_exists()
-    command -v "$1" > /dev/null 2>&1
+	command -v "$1" > /dev/null 2>&1
 
 get_cpu()
 {
-    cpu=$(command_exists lscpu && lscpu | grep "Model name" | awk -F: '{print $2}' | xargs || echo "Unavailable")
-    echo "CPU: "$cpu
+	cpu=$(command_exists lscpu && lscpu | grep "Model name" | awk -F: '{print $2}' | xargs || echo "Unavailable")
+	echo "CPU: "$cpu
 }
 
 who=$(whoami)

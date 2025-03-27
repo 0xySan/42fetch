@@ -234,10 +234,9 @@ GetShell()
 
 GetResolution()
 {
-	Xaxis=$(xrandr --current | grep '*' | uniq | awk '{print $1}' | cut -d 'x' -f1 | uniq)
-	Yaxis=$(xrandr --current | grep '*' | uniq | awk '{print $1}' | cut -d 'x' -f2 | uniq)
-
-	printf "%s%sx%s" "Resolution: " $Xaxis $Yaxis
+	res=$(xrandr --current | grep '*' | awk '{gsub(/\+/,"",$2); r=int($2+0.5); print $1 " @ " r "Hz"}' | sort -t'@' -k2,2 -n -r | awk '{printf "%s%s", (NR==1 ? "" : ", "), $0}')
+	
+	printf "Resolution: %s\n" "$res"
 }
 
 GetDE()

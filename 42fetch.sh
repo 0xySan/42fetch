@@ -18,6 +18,10 @@ _BLAHAJ_ALIAS="blahaj blåhaj"
 _FT_ALIAS="42 ft fortytwo forty-two"
 _UBUNTU_ALIAS="ubuntu"
 
+# Define global variables
+_min_option=0
+_logo="42"
+_logo_final="42"
 
 # Manage flags
 PrintHelp()
@@ -38,7 +42,7 @@ for arg in "$@"; do
 	esac
 done
 
-TEMP=$(getopt -o hl: --long logo:,help -- "$@") 2>/dev/null
+TEMP=$(getopt -o hml: --long logo:,help,min -- "$@") 2>/dev/null
 
 if [ $? != 0 ]; then
 	for arg in "$@"; do
@@ -60,11 +64,14 @@ while true; do
 				PrintHelp
 				exit 1
 			fi
-			logo=$(echo "$2" | sed 's/^=//')
+			_logo=$(echo "$2" | sed 's/^=//')
 			shift 2;;
 		--logo)
-			logo="$2"
+			_logo="$2"
 			shift 2;;
+		-m|--min)
+			_min_option=1
+			shift;;
 		-h|--help)
 			PrintHelp
 			exit 0;;
@@ -76,29 +83,29 @@ while true; do
 	esac
 done
 
-if [ -z "$logo" ]; then
-	logo=42
+if [ -z "$_logo" ]; then
+	_logo=42
 fi
 
 # Get logo
 
 get_logo_file() {
-    alias_input="$1"
+	alias_input="$1"
 	alias_input=$(echo "$alias_input" | tr '[:upper:]' '[:lower:]')
 
-    for logo in $_LOGOS; do
-        eval "alias_var=\${${logo}_ALIAS}"
-        eval "file_var=\${${logo}}"
+	for logo in $_LOGOS; do
+		eval "alias_var=\${${logo}_ALIAS}"
+		eval "file_var=\${${logo}}"
 
-        for word in $alias_var; do
-            if [ "$word" = "$alias_input" ]; then
-                echo "$file_var" | cut -d' ' -f2-
-                return
-            fi
-        done
-    done
+		for word in $alias_var; do
+			if [ "$word" = "$alias_input" ]; then
+				echo "$file_var" | cut -d' ' -f2-
+				return
+			fi
+		done
+	done
 
-    echo "Alias not found"
+	echo "Alias not found"
 }
 
 GetMaxLineLength() {
@@ -128,29 +135,214 @@ PrintLogo() {
 CommandExists()
 	command -v "$1" > /dev/null 2>&1
 
-GetCpu()
+GetUser()
 {
-	cpu=$(CommandExists lscpu && lscpu | grep "Model name" | awk -F: '{print $2}' | xargs || echo "Unavailable")
-	echo "CPU: "$cpu
+	who=$(whoami)
+	printf "$who"
 }
 
-who=$(whoami)
-hostname=$(CommandExists hostname && hostname || echo "Unknown")
-os=$(uname -o)
-distro=$(CommandExists lsb_release && lsb_release -d | awk -F"\t" '{print $2}' || echo "Unavailable")
-kernel=$(uname -r)
-uptime=$(uptime -p)
-memory=$(CommandExists free && free -h | awk '/Mem:/ {print $2 " total, " $3 " used"}' || echo "Unavailable")
+GetHostname()
+{
+	hostname=$(CommandExists hostname && hostname || echo "Unknown")
+	printf "$hostname"
+}
+
+GetLengthUserHost()
+{
+	length=$(GetUser)
+	length="$length@$(GetHostname)"
+	length="${#length}"
+	for i in $(seq 1 "$length"); do
+		echo -n "-"
+	done
+}
+
+GetDistro()
+{
+	distro=$(CommandExists lsb_release && lsb_release -d | awk -F"\t" '{print $2}' || echo "Unavailable")
+	printf "OS: $distro"
+}
+
+GetHost()
+{
+	host=$(CommandExists hostnamectl && hostnamectl | grep "Hardware Model" | cut -d ':' -f2 | sed 's/^[ \t]*//' || echo "Unavailable")
+	printf "Host: $host"
+}
+
+GetKernel()
+{
+	kernel=$(uname -r)
+	printf "Kernel: $kernel"
+}
+
+GetUptime()
+{
+	uptime=$(uptime -p | sed 's/^up //')
+	printf "Uptime: $uptime"
+}
+
+GetPackages()
+{
+	packages=""
+	if CommandExists dpkg; then
+		packages="$(dpkg --get-selections | wc -l) (dpkg)"
+	elif CommandExists dnf; then
+		packages="$(dnf list installed | wc -l) (dnf)"
+	elif CommandExists pacman; then
+		packages="$(pacman -Q | wc -l) (pacman)"
+	elif CommandExists brew; then
+		packages="$(brew list | wc -l) (brew)"
+	elif CommandExists winget; then
+		packages="$(winget list | wc -l) (winget)"
+	fi
+	if command -v snap > /dev/null 2>&1 && [ $(snap list | wc -l) -gt 0 ]; then
+		if [ -z "$packages" ]; then
+			packages="$(snap list | wc -l) (snap)"
+		else
+			packages="$packages, $(snap list | wc -l) (snap)"
+		fi
+	fi
+	if command -v flatpak > /dev/null 2>&1 && [ $(flatpak list | wc -l) -gt 0 ]; then
+		if [ -z "$packages" ]; then
+			packages="$(flatpak list | wc -l) (flatpak)"
+		else
+			packages="$packages, $(flatpak list | wc -l) (flatpak)"
+		fi
+	fi
+	
+	printf "Packages: $packages"
+}
+
+GetShell()
+{
+    parentShell=$(ps -o comm= -p $(ps -o ppid= -p $$))
+    shell=""
+
+    if echo "$parentShell" | grep -q "zsh"; then
+        shell=$($parentShell --version | sed 's/(.*)//')
+    elif echo "$parentShell" | grep -q "bash"; then
+        shell="bash $($parentShell --version | awk 'NR==1 {print $4}' | cut -d '(' -f 1)"
+    else
+        shell=$parentShell
+    fi
+	printf "Shell: $shell"
+}
+
+GetResolution()
+{
+	Xaxis=$(xrandr --current | grep '*' | uniq | awk '{print $1}' | cut -d 'x' -f1)
+	Yaxis=$(xrandr --current | grep '*' | uniq | awk '{print $1}' | cut -d 'x' -f2)
+
+	printf "%s%sx%s" "Resolution: " $Xaxis $Yaxis
+}
+
+GetDE()
+{
+	DE=""
+	if ps -e | grep -q "gnome-session"; then
+		DE="GNOME"
+	elif ps -e | grep -q "startkde"; then
+		DE="KDE"
+	elif ps -e | grep -q "xfce4-session"; then
+		DE="XFCE"
+	elif ps -e | grep -q "cinnamon-session"; then
+		DE="Cinnamon"
+	elif ps -e | grep -q "mate-session"; then
+		DE="MATE"
+	elif ps -e | grep -q "lxsession"; then
+		DE="LXDE"
+	fi
+
+	printf "DE: $DE"
+}
+
+# GetWM()
+	# TODO
+
+GetTerminal()
+{
+	parent_pid=$(ps -o ppid= -p $$)
+	grandparent_pid=$(ps -o ppid= -p $parent_pid)
+	grandparent_command=$(ps -p $grandparent_pid -o comm=)
+
+	terminal="Unknow"
+	terminal="${grandparent_command%[: ]*}"
+	if [ "$grandparent_command" = "gnome-terminal-" ]; then
+		terminal="${grandparent_command%[-]*}"
+	fi
+	printf "Terminal: $terminal"
+}
+
+GetCpu()
+{
+	cpu=""
+	cpuModel="Unknow"
+	cpuCores="$(grep ^cpu\\scores /proc/cpuinfo | uniq |  awk '{print $4}')"
+	cpuSpeed=$(grep "cpu MHz" /proc/cpuinfo | head -n 1 | awk '{print $4}')
+
+	if command -v lscpu >/dev/null 2>&1; then
+		cpuModel=$(lscpu | grep "Model name" | sed -E 's/Model name:\s+//')
+	else
+		cpuModel=$(grep -m 1 "model name" /proc/cpuinfo | sed -E 's/.*: //')
+	fi
+
+	cpu=$(echo "$cpuModel" | sed -E 's/\(R\)//g; s/\(TM\)//g; s/ CPU//g; s/ Core / /g; s/ +/ /g; s/ @.*//')
+	cpu="$cpu ($cpuCores)"
+	cpu="$cpu @ $(echo "scale=2; $cpuSpeed / 1000" | bc) Ghz"
+
+	printf "CPU: $cpu"
+}
+
+GetGPU()
+{
+	gpu_info=$(lspci | grep -i vga | sed -E 's/.*: ([^ ]+).* \[([^]]+)\].*/\1 \2/;s/ \/.*//;s/Intel/Intel/;s/AMD\/ATI/AMD/;s/NVIDIA/NVIDIA/')
+	gpu=""
+
+	while IFS= read -r line; do
+		if [ -z "$gpu" ]; then
+			gpu="$line"
+		else
+			gpu="$line, $gpu"
+		fi
+	done <<EOF
+$gpu_info
+EOF
+
+	printf "GPU: $gpu"
+}
+
+GetFullMemory()
+{
+	memory_info=$(free -m | grep Mem)
+	total_memory=$(echo $memory_info | awk '{print $2}')
+
+	printf "$total_memory Mib"
+}
+
+GetUsedMemory()
+{
+	memory_info=$(free -m | grep Mem)
+	used_memory=$(echo $memory_info | awk '{print $3}')
+
+	printf "$used_memory Mib"
+}
+
 ipAddress=$(CommandExists hostname && (hostname -I || hostname -i) | awk '{print $1}' || echo "Unavailable")
 publicIp=$(CommandExists curl && curl -s ifconfig.me || echo "Unavailable")
 lastBoot=$(CommandExists who && who -b | awk '{print $3, $4}' || echo "Unavailable")
 processCount=$(ps aux | wc -l)
 rootPartition=$(df -h --output=target,used,avail,pcent | grep '/ ' | awk '{print $2 " " $3 " " $4}')
 homePartition=$(df -h --output=target,used,avail,pcent | grep '/home' | awk '{print $2 " " $3 " " $4}')
-memoryUsage=$(free -g | awk '/Mem:/ {printf "%d%% used (%d/%d GB)", $3/$2*100, $3, $2}')
-cpuUsage=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8 "% used"}')
+cpuUsage=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8 "%"}')
 
+_logo="logo/"$(get_logo_file $_logo)
+
+if [ "$((_min_option))" -eq 1 ]; then
+	_logo_final="${_logo%.txt}-min.txt"
+fi
+
+[ -e "$_logo_final" ] || _logo_final="$_logo"
 
 # Render
-PrintLogo "logo/$(get_logo_file "$logo")"
-echo "$who\n$hostname\n$os\n$distro\n$kernel\n$uptime\n$(GetCpu) : $cpuUsage\n$memory : $memoryUsage\n$ipAddress\n$publicIp\n$lastBoot\n$processCount\n$rootPartition\n$homePartition"
+PrintLogo "$_logo_final"
+echo "$(GetUser)@$(GetHostname)\n$(GetLengthUserHost)\n$(GetDistro)\n$(GetHost)\n$(GetKernel)\n$(GetUptime)\n$(GetPackages)\n$(GetShell)\n$(GetResolution)\n$(GetDE)\n$(GetTerminal)\n$(GetCpu) | Usage : $cpuUsage\n$(GetGPU)\nMemory: $(GetUsedMemory) / $(GetFullMemory)\n$ipAddress\n$publicIp\n$lastBoot\n$processCount\n$rootPartition\n$homePartition"

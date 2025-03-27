@@ -6,6 +6,7 @@
 # Define constants
 _PROGRAM_NAME="42fetch"
 _COLORS_FILE="./data/colors.conf"
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 _LOGOS="_ARCH _BLAHAJ _FT _UBUNTU"
 
@@ -174,7 +175,7 @@ fi
 
 # Get logo
 
-get_logoFile()
+getLogoFile()
 {
 	aliasInput="$1"
 	aliasInput=$(echo "$aliasInput" | tr '[:upper:]' '[:lower:]')
@@ -194,12 +195,20 @@ get_logoFile()
 	echo "Alias not found"
 }
 
-GetColors()
-{
-	_colors=$(awk -v flag="$_flag" '
-    /^\[.*\]$/ { section=($0 == "[" flag "]") }
-    section && /^colors=/ { sub("colors=", ""); print $0 }
-' "$_COLORS_FILE")
+GetColors() {
+	flags_list=$(echo "$_flag" | tr ',' ' ')
+	set -- $flags_list
+	num_flags=$#
+	if [ "$num_flags" -gt 0 ]; then
+		random_index=$(date +%3N)
+		random_index=${random_index#0}
+		random_index=$((random_index % num_flags))
+		chosen_flag=$(eval echo \$$((random_index + 1)))
+		_colors=$(awk -v flag="$chosen_flag" '
+			/^\[.*\]$/ { section=($0 == "[" flag "]") }
+			section && /^colors=/ { sub("colors=", ""); print $0 }
+		' "$_SCRIPT_DIR/$_COLORS_FILE")
+	fi
 }
 
 GetMaxLineLength()
@@ -212,7 +221,7 @@ GetMaxLineLength()
 		if [ "$length" -gt "$maxLenght" ]; then
 			maxLenght=$length
 		fi
-	done < "$file"
+	done < "$_SCRIPT_DIR/$file"
 
 	echo "$((maxLenght + 4))"
 }
@@ -259,7 +268,7 @@ PrintLogoWithCfg()
 		if IFS= read -r cfg_line <&3; then
 			if [ -n "$_colors" ]; then
 				currentColor=$(eval echo "\$$((colorIndex + 1))")
-				printf "\e[38;5;${currentColor}m%-${maxLenght}s\e[0m%s\n" "$logo_line" "$cfg_line"
+				printf "\e[38;2;${currentColor}m%-${maxLenght}s\e[0m%s\n" "$logo_line" "$cfg_line"
 				colorIndex=$(( (colorIndex + 1) % numColors ))
 			else
 				printf "%-${maxLenght}s%s\n" "$logo_line" "$cfg_line"
@@ -267,13 +276,13 @@ PrintLogoWithCfg()
 		else
 			if [ -n "$_colors" ]; then
 				currentColor=$(eval echo "\$$((colorIndex + 1))")
-				printf "\e[38;5;${currentColor}m%s\e[0m\n" "$logo_line"
+				printf "\e[38;2;${currentColor}m%s\e[0m\n" "$logo_line"
 				colorIndex=$(( (colorIndex + 1) % numColors ))
 			else
 				printf "%s\n" "$logo_line"
 			fi
 		fi
-	done < "$logoFile"
+	done < "$_SCRIPT_DIR/$logoFile"
 
 	while IFS= read -r cfg_line <&3; do
 		printf "%-${maxLenght}s%s\n" "" "$cfg_line"
@@ -496,7 +505,7 @@ rootPartition=$(df -h --output=target,used,avail,pcent | grep '/ ' | awk '{print
 homePartition=$(df -h --output=target,used,avail,pcent | grep '/home' | awk '{print $2 " " $3 " " $4}')
 cpuUsage=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8 "%"}')
 
-_logo="logo/"$(get_logoFile $_logo)
+_logo="logo/"$(getLogoFile $_logo)
 
 if [ "$((_minOption))" -eq 1 ]; then
 	_logoFinal="${_logo%.txt}-min.txt"

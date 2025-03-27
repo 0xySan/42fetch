@@ -25,7 +25,9 @@ _logo_final="42"
 
 # Manage flags
 PrintHelp()
+{
 	echo "Usage: $0 [-l=value | --logo=value] [-h|--help]"
+}
 
 for arg in "$@"; do
 	case "$arg" in
@@ -133,7 +135,9 @@ PrintLogo() {
 
 # Get system information
 CommandExists()
+{
 	command -v "$1" > /dev/null 2>&1
+}
 
 GetUser()
 {
@@ -230,8 +234,8 @@ GetShell()
 
 GetResolution()
 {
-	Xaxis=$(xrandr --current | grep '*' | uniq | awk '{print $1}' | cut -d 'x' -f1)
-	Yaxis=$(xrandr --current | grep '*' | uniq | awk '{print $1}' | cut -d 'x' -f2)
+	Xaxis=$(xrandr --current | grep '*' | uniq | awk '{print $1}' | cut -d 'x' -f1 | uniq)
+	Yaxis=$(xrandr --current | grep '*' | uniq | awk '{print $1}' | cut -d 'x' -f2 | uniq)
 
 	printf "%s%sx%s" "Resolution: " $Xaxis $Yaxis
 }
@@ -251,6 +255,8 @@ GetDE()
 		DE="MATE"
 	elif ps -e | grep -q "lxsession"; then
 		DE="LXDE"
+	elif ps -e | grep -q "Hyprland"; then
+		DE="Hyprland"
 	fi
 
 	printf "DE: $DE"
@@ -286,29 +292,35 @@ GetCpu()
 		cpuModel=$(grep -m 1 "model name" /proc/cpuinfo | sed -E 's/.*: //')
 	fi
 
-	cpu=$(echo "$cpuModel" | sed -E 's/\(R\)//g; s/\(TM\)//g; s/ CPU//g; s/ Core / /g; s/ +/ /g; s/ @.*//')
+	cpu=$(echo "$cpuModel" | sed -E 's/\(R\)//g; s/\(TM\)//g; s/ CPU//g; s/ [0-9]+-Core Processor//g; s/ +/ /g; s/ @.*//')
 	cpu="$cpu ($cpuCores)"
-	cpu="$cpu @ $(echo "scale=2; $cpuSpeed / 1000" | bc) Ghz"
+	cpu="$cpu @ $(echo "$cpuSpeed" | awk '{printf "%.1f", $1/1000}') Ghz"
 
 	printf "CPU: $cpu"
 }
 
 GetGPU()
 {
-	gpu_info=$(lspci | grep -i vga | sed -E 's/.*: ([^ ]+).* \[([^]]+)\].*/\1 \2/;s/ \/.*//;s/Intel/Intel/;s/AMD\/ATI/AMD/;s/NVIDIA/NVIDIA/')
-	gpu=""
+    gpu_info=$(lspci | grep -i vga)
+    gpu=""
 
-	while IFS= read -r line; do
-		if [ -z "$gpu" ]; then
-			gpu="$line"
-		else
-			gpu="$line, $gpu"
-		fi
-	done <<EOF
+    while IFS= read -r line; do
+        if echo "$line" | grep -qi "AMD"; then
+            processed=$(echo "$line" | sed -E 's/.*(Radeon RX )([0-9]+)\/[0-9]+ XT.*/AMD \1\2 XT/')
+        else
+            processed=$(echo "$line" | sed -E 's/.*: ([^ ]+).* \[([^]]+)\].*/\1 \2/; s/ \/.*//')
+        fi
+
+        if [ -z "$gpu" ]; then
+            gpu="$processed"
+        else
+            gpu="$gpu, $processed"
+        fi
+    done <<EOF
 $gpu_info
 EOF
 
-	printf "GPU: $gpu"
+    printf "GPU: %s" "$gpu"
 }
 
 GetFullMemory()
@@ -327,7 +339,7 @@ GetUsedMemory()
 	printf "$used_memory Mib"
 }
 
-ipAddress=$(CommandExists hostname && (hostname -I || hostname -i) | awk '{print $1}' || echo "Unavailable")
+ipAddress=$(CommandExists hostname && (hostname -i || hostname -I) | awk '{print $1}' || echo "Unavailable")
 publicIp=$(CommandExists curl && curl -s ifconfig.me || echo "Unavailable")
 lastBoot=$(CommandExists who && who -b | awk '{print $3, $4}' || echo "Unavailable")
 processCount=$(ps aux | wc -l)
@@ -345,4 +357,25 @@ fi
 
 # Render
 PrintLogo "$_logo_final"
-echo "$(GetUser)@$(GetHostname)\n$(GetLengthUserHost)\n$(GetDistro)\n$(GetHost)\n$(GetKernel)\n$(GetUptime)\n$(GetPackages)\n$(GetShell)\n$(GetResolution)\n$(GetDE)\n$(GetTerminal)\n$(GetCpu) | Usage : $cpuUsage\n$(GetGPU)\nMemory: $(GetUsedMemory) / $(GetFullMemory)\n$ipAddress\n$publicIp\n$lastBoot\n$processCount\n$rootPartition\n$homePartition"
+printf "$(GetUser)@$(GetHostname)\n"
+echo "$(GetLengthUserHost)"
+printf "$(GetDistro)\n"
+printf "$(GetHost)\n"
+printf "$(GetKernel)\n"
+printf "$(GetUptime)\n"
+printf "$(GetPackages)\n"
+printf "$(GetShell)\n"
+printf "$(GetResolution)\n"
+printf "$(GetDE)\n"
+printf "$(GetTerminal)\n"
+printf "$(GetCpu)\n"
+printf "$(GetGPU)\n"
+printf "Memory: $(GetUsedMemory) / $(GetFullMemory)\n"
+printf "IP: $ipAddress\n"
+printf "PIP: $publicIp\n"
+printf "LastBoot: $lastBoot\n"
+printf "PC: $processCount\n"
+echo "Root: $rootPartition"
+if [ -n "$homePartition" ]; then
+	printf "Home: $homePartition"
+fi

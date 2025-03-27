@@ -36,7 +36,7 @@ for arg in "$@"; do
 			exit 1;;
 		--logo?*)
 			case "$arg" in
-				--logo=*);;
+				--logo=*|--logo:*);;
 				*)
 					PrintHelp
 					exit 1;;
@@ -61,12 +61,12 @@ eval set -- "$TEMP"
 while true; do
 	case "$1" in
 		-l)
-			if echo "$2" | grep -qv '^='; then
+			if echo "$2" | grep -qv '^[=:]'; then
 				echo "Error: -l must use the format -l=value"
 				PrintHelp
 				exit 1
 			fi
-			_logo=$(echo "$2" | sed 's/^=//')
+			_logo=$(echo "$2" | sed 's/^[=:]//')
 			shift 2;;
 		--logo)
 			_logo="$2"

@@ -5,6 +5,7 @@
 
 # Define constants
 _PROGRAM_NAME="42fetch"
+_COLORS_FILE="./data/colors.conf"
 
 _LOGOS="_ARCH _BLAHAJ _FT _UBUNTU"
 
@@ -19,10 +20,12 @@ _FT_ALIAS="42 ft fortytwo forty-two"
 _UBUNTU_ALIAS="ubuntu"
 
 # Define global variables
-_min_option=0
+_minOption=0
 _logo=""
-_logo_final=""
-_config_file=""
+_logoFinal=""
+_configFile=""
+_flag=""
+_colors=""
 
 # Manage flags
 PrintHelp() {
@@ -52,10 +55,20 @@ for arg in "$@"; do
 					PrintHelp
 					exit 1 ;;
 			esac ;;
+		--flag)
+			echo "Error: --flag must use the format --flag=value" >&2
+			exit 1 ;;
+		--flag?*)
+			case "$arg" in
+				--flag=*) ;;
+				*)
+					PrintHelp
+					exit 1 ;;
+			esac ;;
 	esac
 done
 
-TEMP=$(getopt -o hml:c: --long logo:,config:,help,min -- "$@") 2>/dev/null
+TEMP=$(getopt -o hml:c:f: --long flag:,logo:,config:,help,min -- "$@") 2>/dev/null
 
 if [ $? != 0 ]; then
 	for arg in "$@"; do
@@ -74,29 +87,40 @@ eval set -- "$TEMP"
 while true; do
 	case "$1" in
 		-l)
-			if echo "$2" | grep -qv '^[=:]'; then
+			if echo "$2" | grep -qv '^[=]'; then
 				echo "Error: -l must use the format -l=value"
 				PrintHelp
 				exit 1
 			fi
-			_logo=$(echo "$2" | sed 's/^[=:]//')
+			_logo=$(echo "$2" | sed 's/^[=]//')
 			shift 2;;
 		-c)
-			if echo "$2" | grep -qv '^[=:]'; then
+			if echo "$2" | grep -qv '^[=]'; then
 				echo "Error: -c must use the format -c=value"
 				PrintHelp
 				exit 1
 			fi
-			_config_file=$(echo "$2" | sed 's/^[=:]//')
+			_configFile=$(echo "$2" | sed 's/^[=]//')
+			shift 2;;
+		-f)
+			if echo "$2" | grep -qv '^[=]'; then
+				echo "Error: -c must use the format -c=value"
+				PrintHelp
+				exit 1
+			fi
+			_flag=$(echo "$2" | sed 's/^[=]//')
 			shift 2;;
 		--config)
-			_config_file="$2"
+			_configFile="$2"
 			shift 2;;
 		--logo)
 			_logo="$2"
 			shift 2;;
+		--flag)
+			_flag="$2"
+			shift 2;;
 		-m|--min)
-			_min_option=1
+			_minOption=1
 			shift;;
 		-h|--help)
 			PrintHelp
@@ -113,54 +137,55 @@ eval set -- "$TEMP"
 
 if [ -z "$_logo" ]; then
 	_logo=42
-	_logo_final=42
+	_logoFinal=42
 fi
 
 CreateDefaultCfgFile()
 {
-	touch default.cfg
-	echo "\$user@\$hostmachine" > default.cfg
-	echo "\$lengthuh" >> default.cfg
-	echo "OS: \$os" >> default.cfg
-	echo "Host: \$hostmachine" >> default.cfg
-	echo "Kernel: \$kernel" >> default.cfg
-	echo "Uptime: \$uptime" >> default.cfg
-	echo "Packages: \$packages" >> default.cfg
-	echo "Shell: \$shell" >> default.cfg
-	echo "Resolution: \$resolution" >> default.cfg
-	echo "DE: \$de" >> default.cfg
-	echo "Terminal: \$terminal" >> default.cfg
-	echo "CPU: \$cpu" >> default.cfg
-	echo "GPU: \$gpu" >> default.cfg
-	echo "Memory: \$memory" >> default.cfg
-	echo "IP: \$ip" >> default.cfg
-	echo "PIP: \$pip" >> default.cfg
-	echo "LastBoot: \$lastboot" >> default.cfg
-	echo "PC: \$pc" >> default.cfg
-	echo "Root: \$root" >> default.cfg
-	echo -n "EOF" >> default.cfg
+	cat > default.cfg << EOF
+\$user@\$hostmachine
+\$lengthuh
+OS: \$os
+Host: \$hostmachine
+Kernel: \$kernel
+Uptime: \$uptime
+Packages: \$packages
+Shell: \$shell
+Resolution: \$resolution
+DE: \$de
+Terminal: \$terminal
+CPU: \$cpu
+GPU: \$gpu
+Memory: \$memory
+IP: \$ip
+PIP: \$pip
+LastBoot: \$lastboot
+PC: \$pc
+Root: \$root
+EOF
 }
 
-if [ -z "$_config_file" ] || [ ! -f "$_config_file" ]; then
+if [ -z "$_configFile" ] || [ ! -f "$_configFile" ]; then
 	if [ ! -f "default.cfg" ]; then
 		CreateDefaultCfgFile
 	fi
-	_config_file="default.cfg"
+	_configFile="default.cfg"
 fi
 
 # Get logo
 
-get_logo_file() {
-	alias_input="$1"
-	alias_input=$(echo "$alias_input" | tr '[:upper:]' '[:lower:]')
+get_logoFile()
+{
+	aliasInput="$1"
+	aliasInput=$(echo "$aliasInput" | tr '[:upper:]' '[:lower:]')
 
 	for logo in $_LOGOS; do
-		eval "alias_var=\${${logo}_ALIAS}"
-		eval "file_var=\${${logo}}"
+		eval "aliasVar=\${${logo}_ALIAS}"
+		eval "fileVar=\${${logo}}"
 
-		for word in $alias_var; do
-			if [ "$word" = "$alias_input" ]; then
-				echo "$file_var" | cut -d' ' -f2-
+		for word in $aliasVar; do
+			if [ "$word" = "$aliasInput" ]; then
+				echo "$fileVar" | cut -d' ' -f2-
 				return
 			fi
 		done
@@ -169,26 +194,35 @@ get_logo_file() {
 	echo "Alias not found"
 }
 
-GetMaxLineLength() {
+GetColors()
+{
+	_colors=$(awk -v flag="$_flag" '
+    /^\[.*\]$/ { section=($0 == "[" flag "]") }
+    section && /^colors=/ { sub("colors=", ""); print $0 }
+' "$_COLORS_FILE")
+}
+
+GetMaxLineLength()
+{
 	local file="$1"
-	local max_length=0
+	local maxLenght=0
 
 	while IFS= read -r line; do
 		local length=${#line}
-		if [ "$length" -gt "$max_length" ]; then
-			max_length=$length
+		if [ "$length" -gt "$maxLenght" ]; then
+			maxLenght=$length
 		fi
 	done < "$file"
 
-	echo "$((max_length + 4))"
+	echo "$((maxLenght + 4))"
 }
 
 PrintLogoWithCfg()
 {
-	local logo_file="$1"
-	local cfg_file="$_config_file"
-	local max_length
-	max_length=$(GetMaxLineLength "$logo_file")
+	local logoFile="$1"
+	local cfgFile="$_configFile"
+	local maxLenght
+	maxLenght=$(GetMaxLineLength "$logoFile")
 	
 	export user="$(GetUser)"
 	export hostmachine="$(GetHostname)"
@@ -213,20 +247,36 @@ PrintLogoWithCfg()
 
 	local tmp_cfg
 	tmp_cfg=$(mktemp)
-	envsubst < "$cfg_file" > "$tmp_cfg"
+	envsubst < "$cfgFile" > "$tmp_cfg"
 
 	exec 3< "$tmp_cfg"
 
+	GetColors
+	set -- $_colors
+	local colorIndex=0
+	local numColors=$#
 	while IFS= read -r logo_line; do
 		if IFS= read -r cfg_line <&3; then
-			printf "%-${max_length}s%s\n" "$logo_line" "$cfg_line"
+			if [ -n "$_colors" ]; then
+				currentColor=$(eval echo "\$$((colorIndex + 1))")
+				printf "\e[38;5;${currentColor}m%-${maxLenght}s\e[0m%s\n" "$logo_line" "$cfg_line"
+				colorIndex=$(( (colorIndex + 1) % numColors ))
+			else
+				printf "%-${maxLenght}s%s\n" "$logo_line" "$cfg_line"
+			fi
 		else
-			printf "%s\n" "$logo_line"
+			if [ -n "$_colors" ]; then
+				currentColor=$(eval echo "\$$((colorIndex + 1))")
+				printf "\e[38;5;${currentColor}m%s\e[0m\n" "$logo_line"
+				colorIndex=$(( (colorIndex + 1) % numColors ))
+			else
+				printf "%s\n" "$logo_line"
+			fi
 		fi
-	done < "$logo_file"
+	done < "$logoFile"
 
 	while IFS= read -r cfg_line <&3; do
-		printf "%-${max_length}s%s\n" "" "$cfg_line"
+		printf "%-${maxLenght}s%s\n" "" "$cfg_line"
 	done
 
 	exec 3<&-
@@ -446,13 +496,13 @@ rootPartition=$(df -h --output=target,used,avail,pcent | grep '/ ' | awk '{print
 homePartition=$(df -h --output=target,used,avail,pcent | grep '/home' | awk '{print $2 " " $3 " " $4}')
 cpuUsage=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8 "%"}')
 
-_logo="logo/"$(get_logo_file $_logo)
+_logo="logo/"$(get_logoFile $_logo)
 
-if [ "$((_min_option))" -eq 1 ]; then
-	_logo_final="${_logo%.txt}-min.txt"
+if [ "$((_minOption))" -eq 1 ]; then
+	_logoFinal="${_logo%.txt}-min.txt"
 fi
 
-[ -e "$_logo_final" ] || _logo_final="$_logo"
+[ -e "$_logoFinal" ] || _logoFinal="$_logo"
 
 # Render
-PrintLogoWithCfg "$_logo_final"
+PrintLogoWithCfg "$_logoFinal"

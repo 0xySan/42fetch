@@ -376,5 +376,5 @@ printf "LastBoot: $lastBoot\n"
 printf "PC: $processCount\n"
 echo "Root: $rootPartition"
 if [ -n "$homePartition" ]; then
-	printf "Home: $homePartition"
+	echo "Home: $homePartition"
 fi

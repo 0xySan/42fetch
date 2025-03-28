@@ -136,10 +136,31 @@ done
 
 eval set -- "$TEMP"
 
+GetLogo()
+{
+	logoList=$(echo "$_logo" | tr ',' ' ')
+	logoList=$(echo "$logoList" | tr '[:upper:]' '[:lower:]')
+	set -- $logoList
+	numLogos=$#
+	if [ "$numLogos" -gt 0 ]; then
+		random_index=$(date +%3N)
+		random_index=${random_index#0}
+		random_index=$((random_index % numLogos))
+		_logo=$(eval echo \$$((random_index + 1)))
+		_logoFinal=$_logo
+	else
+		_logo=42
+		_logoFinal=42
+	fi
+}
+
 if [ -z "$_logo" ]; then
 	_logo=42
 	_logoFinal=42
+else
+	GetLogo
 fi
+
 
 CreateDefaultCfgFile()
 {
@@ -401,24 +422,27 @@ GetResolution()
 GetDE()
 {
 	DE=""
-	if ps -e | grep -q "gnome-session"; then
-		DE="GNOME"
-	elif ps -e | grep -q "startkde"; then
-		DE="KDE"
-	elif ps -e | grep -q "xfce4-session"; then
-		DE="XFCE"
-	elif ps -e | grep -q "cinnamon-session"; then
+	if ps -e | grep -q "cinnamon-session"; then
 		DE="Cinnamon"
-	elif ps -e | grep -q "mate-session"; then
-		DE="MATE"
-	elif ps -e | grep -q "lxsession"; then
-		DE="LXDE"
+	elif ps -e | grep -q "gnome-session"; then
+		DE="GNOME"
 	elif ps -e | grep -q "Hyprland"; then
 		DE="Hyprland"
+	elif ps -e | grep -q "ksmserver"; then
+		DE="Plasma"
+	elif ps -e | grep -q "lxsession"; then
+		DE="LXDE"
+	elif ps -e | grep -q "mate-session"; then
+		DE="MATE"
+	elif ps -e | grep -q "plasmashell"; then
+		DE="Plasma"
+	elif ps -e | grep -q "xfce4-session"; then
+		DE="XFCE"
 	fi
 
 	printf "$DE"
 }
+
 
 # GetWM()
 	# TODO

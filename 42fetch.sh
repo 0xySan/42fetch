@@ -161,10 +161,9 @@ else
 	GetLogo
 fi
 
-
 CreateDefaultCfgFile()
 {
-	cat > default.cfg << EOF
+	cat > "$_SCRIPT_DIR/default.cfg" <<EOF
 \$user@\$hostmachine
 \$lengthuh
 OS: \$os
@@ -188,10 +187,10 @@ EOF
 }
 
 if [ -z "$_configFile" ] || [ ! -f "$_configFile" ]; then
-	if [ ! -f "default.cfg" ]; then
+	if [ ! -f "$_SCRIPT_DIR/default.cfg" ]; then
 		CreateDefaultCfgFile
 	fi
-	_configFile="default.cfg"
+	_configFile="$_SCRIPT_DIR/default.cfg"
 fi
 
 # Get logo
@@ -442,7 +441,6 @@ GetDE()
 
 	printf "$DE"
 }
-
 
 # GetWM()
 	# TODO

@@ -2,11 +2,17 @@
 
 # 42fetch - A simple system information tool written in shell
 
-
 # Define constants
+_HOME_DIR=$(eval echo "~$USER")
+_CONFIG_FOLDER=""
 _PROGRAM_NAME="42fetch"
 _COLORS_FILE="./data/colors.conf"
-_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if [ -z "$_CONFIG_FOLDER" ]; then
+	_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+else
+	_SCRIPT_DIR="$_CONFIG_FOLDER"
+fi
 
 _LOGOS="_ARCH _BLAHAJ _FT _UBUNTU"
 

@@ -31,6 +31,7 @@ _UBUNTU_ALIAS="ubuntu"
 _minOption=0
 _logo=""
 _logoFinal=""
+_logoUsed=""
 _configFile=""
 _flag=""
 _colors=""
@@ -164,15 +165,18 @@ GetLogo()
 		random_index=$((random_index % numLogos))
 		_logo=$(eval echo \$$((random_index + 1)))
 		_logoFinal=$_logo
+		_logoUsed=$_logo
 	else
 		_logo=42
 		_logoFinal=42
+		_logoUsed=42
 	fi
 }
 
 if [ -z "$_logo" ]; then
 	_logo=42
 	_logoFinal=42
+	_logoUsed=42
 else
 	GetLogo
 fi
@@ -245,7 +249,7 @@ GetColors() {
 			section && /^colors=/ { sub("colors=", ""); print $0 }
 		' "$_SCRIPT_DIR/$_FLAG_COLORS_FILE")
 	else
-		_colors=$(awk -v logo="$_logoFinal" '
+		_colors=$(awk -v logo="$_logoUsed" '
 			/^\[.*\]$/ { section=($0 == "[" logo "]") }
 			section && /^colors=/ { sub("colors=", ""); print $0 }
 		' "$_SCRIPT_DIR/$_LOGO_COLORS_FILE")
@@ -258,6 +262,11 @@ GetMaxLineLength()
 	local maxLenght=0
 
 	while IFS= read -r line; do
+		i=0
+		while [ "$i" -lt 10 ]; do
+			line=$(echo "$line" | sed "s/\${$i}//g")
+			i=$((i + 1))
+		done
 		local length=${#line}
 		if [ "$length" -gt "$maxLenght" ]; then
 			maxLenght=$length
@@ -265,6 +274,26 @@ GetMaxLineLength()
 	done < "$file"
 
 	echo "$((maxLenght + 2))"
+}
+
+ApplyColors()
+{
+	set -- $_colors
+	numColors=$#
+	i=0
+	if [ -n "$_flag" ]; then
+		while [ "$i" -lt 10 ]; do
+			logoLine=$(echo "$logoLine" | sed "s/\${$i}//g")
+			i=$((i + 1))
+		done
+	else
+		while [ "$i" -lt 10 ]; do
+			currentColor=$(eval echo "\$$((i + 1))")
+			logoLine=$(echo "$logoLine" | sed "s/\${$i}/\\\e[38;2;${currentColor}m/g")
+			i=$((i + 1))
+		done
+
+	fi
 }
 
 PrintLogoWithCfg()
@@ -306,28 +335,24 @@ PrintLogoWithCfg()
 	local numColors=$#
 	while IFS= read -r logoLine; do
 		if IFS= read -r cfgLine <&3; then
-			if [ -n "$_colors" ]; then
+			if [ -n "$_flag" ] && [ -n "$_colors" ]; then
 				currentColor=$(eval echo "\$$((colorIndex + 1))")
+				ApplyColors
 				printf "\e[38;2;${currentColor}m%-${maxLenght}s\e[0m%s\n" "$logoLine" "$cfgLine"
 				colorIndex=$(( (colorIndex + 1) % numColors ))
 			else
-				modifiedLogoLine="$logoLine"
-
-				i=0
-				while [ "$i" -lt 10 ]; do
-					eval "color=\${colors$i}"
-					modifiedLogoLine=$(echo "$modifiedLogoLine" | sed "s/\${$i}/\\\e[38;2;${color}m/g")
-					i=$((i + 1))
-				done
-				printf "%-${maxLenght}s%s\n" "$modifiedLogoLine" "$cfgLine"
+				ApplyColors
+				printf "\e[38;2;$(eval echo "\$1")m%-${maxLenght}s\e[0m%s\n" "$logoLine" "$cfgLine"
 			fi
 		else
-			if [ -n "$_colors" ]; then
+			if [ -n "$_flag" ] && [ -n "$_colors" ]; then
 				currentColor=$(eval echo "\$$((colorIndex + 1))")
-				printf "\e[38;2;${currentColor}m%s\e[0m\n" "$logoLine"
+				ApplyColors
+				printf "\e[38;2;${currentColor}m%-${maxLenght}s\e[0m\n" "$logoLine"
 				colorIndex=$(( (colorIndex + 1) % numColors ))
 			else
-				printf "%s\n" "$logoLine"
+				ApplyColors
+				printf "\e[38;2;$(eval echo "\$1")m%-${maxLenght}s\e[0m%s\n" "$logoLine"
 			fi
 		fi
 	done < "$logoFile"

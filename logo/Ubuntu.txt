@@ -1,20 +1,20 @@
              --+oossssssoo+--
          .:+ssssssssssssssssss+:.
        -+ssssssssssssssssssyyssss+-
-     .ossssssssssssssssssd$2MMMNy$1sssso.
-   /sssssssssss$2hdmmNNmmyNMMMMh$1ssssss/
-  +sssssssss$2hm$1yd$2MMMMMMMNddddy$1ssssssss+
- /ssssssss$2hNMMM$1yh$2hyyyyhmNMMMNh$1ssssssss/
-.ssssssss$2dMMMNh$1ssssssssss$2hNMMMd$1ssssssss.
-+ssss$2hhhyNMMNy$1ssssssssssss$2yNMMMy$1sssssss+
-oss$2yNMMMNyMMh$1ssssssssssssss$2hmmmh$1ssssssso
-oss$2yNMMMNyMMh$1sssssssssssssshmmmhssssssso
-+ssss$2hhhyNMMNy$1ssssssssssss$2yNMMMy$1sssssss+
-.ssssssss$2dMMMNh$1ssssssssss$2hNMMMd$1ssssssss.
- /ssssssss$2hNMMM$1yh$2hyyyyhdNMMMNh$1ssssssss/
-  +sssssssss$2dm$1yd$2MMMMMMMMddddy$1ssssssss+
-   /sssssssssss$2hdmNNNNmyNMMMMh$1ssssss/
-    .ossssssssssssssssss$2dMMMNy$1sssso.
-     -+sssssssssssssssss$2yyy$1ssss+-
+     .ossssssssssssssssssd${1}MMMNy${0}sssso.
+   /sssssssssss${1}hdmmNNmmyNMMMMh${0}ssssss/
+  +sssssssss${1}hm${0}yd${1}MMMMMMMNddddy${0}ssssssss+
+ /ssssssss${1}hNMMM${0}yh${1}hyyyyhmNMMMNh${0}ssssssss/
+.ssssssss${1}dMMMNh${0}ssssssssss${1}hNMMMd${0}ssssssss.
++ssss${1}hhhyNMMNy${0}ssssssssssss${1}yNMMMy${0}sssssss+
+oss${1}yNMMMNyMMh${0}ssssssssssssss${1}hmmmh${0}ssssssso
+oss${1}yNMMMNyMMh${0}sssssssssssssshmmmhssssssso
++ssss${1}hhhyNMMNy${0}ssssssssssss${1}yNMMMy${0}sssssss+
+.ssssssss${1}dMMMNh${0}ssssssssss${1}hNMMMd${0}ssssssss.
+ /ssssssss${1}hNMMM${0}yh${1}hyyyyhdNMMMNh${0}ssssssss/
+  +sssssssss${1}dm${0}yd${1}MMMMMMMMddddy${0}ssssssss+
+   /sssssssssss${1}hdmNNNNmyNMMMMh${0}ssssss/
+    .ossssssssssssssssss${1}dMMMNy${0}sssso.
+     -+sssssssssssssssss${1}yyy${0}ssss+-
        `:+ssssssssssssssssss+:'
            --+oossssssoo+--

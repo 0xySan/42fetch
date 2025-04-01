@@ -30,7 +30,16 @@ _colors=""
 
 # Manage flags
 PrintHelp() {
-	echo "Usage: $_PROGRAM_NAME [-l=value | --logo=value] [-c=value | --config=value] [-h|--help]"
+	printf "Usage: $_PROGRAM_NAME [OPTION]...
+A simple system information tool written in shell
+
+With no OPTION, it will display the 42 logo with the default configuration file.
+
+  -m, --min			 Makes the flag smaller if the logo supports it
+  -l=value, --logo=value	 Specify the logo to use. ex: -l=42 would use the 42 logo
+  -c=value, --config=value	 Specify the configuration file to use. ex: -c=default.cfg
+  -f=value, --flag=value	 Specify the flag to use. ex: -f=pride would use the pride flag
+  -h, --help			 Display this help message\n"
 }
 
 # Pre-validate arguments for --logo and --config using manual checks.
@@ -241,7 +250,7 @@ GetMaxLineLength()
 		if [ "$length" -gt "$maxLenght" ]; then
 			maxLenght=$length
 		fi
-	done < "$_SCRIPT_DIR/$file"
+	done < "$file"
 
 	echo "$((maxLenght + 4))"
 }
@@ -302,7 +311,7 @@ PrintLogoWithCfg()
 				printf "%s\n" "$logo_line"
 			fi
 		fi
-	done < "$_SCRIPT_DIR/$logoFile"
+	done < "$logoFile"
 
 	while IFS= read -r cfg_line <&3; do
 		printf "%-${maxLenght}s%s\n" "" "$cfg_line"
@@ -527,7 +536,9 @@ rootPartition=$(df -h --output=target,used,avail,pcent | grep '/ ' | awk '{print
 homePartition=$(df -h --output=target,used,avail,pcent | grep '/home' | awk '{print $2 " " $3 " " $4}')
 cpuUsage=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8 "%"}')
 
-_logo="logo/"$(getLogoFile $_logo)
+_logo="$_SCRIPT_DIR/logo/"$(getLogoFile $_logo)
+
+[ -e "$_logo" ] || _logo="$_SCRIPT_DIR/logo/42.txt"
 
 if [ "$((_minOption))" -eq 1 ]; then
 	_logoFinal="${_logo%.txt}-min.txt"

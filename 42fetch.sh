@@ -6,7 +6,8 @@
 _HOME_DIR=$(eval echo "~")
 _CONFIG_FOLDER=""
 _PROGRAM_NAME="42fetch"
-_COLORS_FILE="./data/colors.conf"
+_FLAG_COLORS_FILE="./data/flag.conf"
+_LOGO_COLORS_FILE="./data/logo.conf"
 
 if [ -z "$_CONFIG_FOLDER" ]; then
 	_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -242,7 +243,12 @@ GetColors() {
 		_colors=$(awk -v flag="$chosen_flag" '
 			/^\[.*\]$/ { section=($0 == "[" flag "]") }
 			section && /^colors=/ { sub("colors=", ""); print $0 }
-		' "$_SCRIPT_DIR/$_COLORS_FILE")
+		' "$_SCRIPT_DIR/$_FLAG_COLORS_FILE")
+	else
+		_colors=$(awk -v logo="$_logoFinal" '
+			/^\[.*\]$/ { section=($0 == "[" logo "]") }
+			section && /^colors=/ { sub("colors=", ""); print $0 }
+		' "$_SCRIPT_DIR/$_LOGO_COLORS_FILE")
 	fi
 }
 
@@ -258,7 +264,7 @@ GetMaxLineLength()
 		fi
 	done < "$file"
 
-	echo "$((maxLenght + 4))"
+	echo "$((maxLenght + 2))"
 }
 
 PrintLogoWithCfg()
@@ -289,42 +295,49 @@ PrintLogoWithCfg()
 	export root="$rootPartition"
 	export home="$homePartition"
 
-	local tmp_cfg
-	tmp_cfg=$(mktemp)
-	envsubst < "$cfgFile" > "$tmp_cfg"
-
-	exec 3< "$tmp_cfg"
+	local tmpCfg
+	tmpCfg=$(mktemp)
+	envsubst < "$cfgFile" > "$tmpCfg"
+	exec 3< "$tmpCfg"
 
 	GetColors
 	set -- $_colors
 	local colorIndex=0
 	local numColors=$#
-	while IFS= read -r logo_line; do
-		if IFS= read -r cfg_line <&3; then
+	while IFS= read -r logoLine; do
+		if IFS= read -r cfgLine <&3; then
 			if [ -n "$_colors" ]; then
 				currentColor=$(eval echo "\$$((colorIndex + 1))")
-				printf "\e[38;2;${currentColor}m%-${maxLenght}s\e[0m%s\n" "$logo_line" "$cfg_line"
+				printf "\e[38;2;${currentColor}m%-${maxLenght}s\e[0m%s\n" "$logoLine" "$cfgLine"
 				colorIndex=$(( (colorIndex + 1) % numColors ))
 			else
-				printf "%-${maxLenght}s%s\n" "$logo_line" "$cfg_line"
+				modifiedLogoLine="$logoLine"
+
+				i=0
+				while [ "$i" -lt 10 ]; do
+					eval "color=\${colors$i}"
+					modifiedLogoLine=$(echo "$modifiedLogoLine" | sed "s/\${$i}/\\\e[38;2;${color}m/g")
+					i=$((i + 1))
+				done
+				printf "%-${maxLenght}s%s\n" "$modifiedLogoLine" "$cfgLine"
 			fi
 		else
 			if [ -n "$_colors" ]; then
 				currentColor=$(eval echo "\$$((colorIndex + 1))")
-				printf "\e[38;2;${currentColor}m%s\e[0m\n" "$logo_line"
+				printf "\e[38;2;${currentColor}m%s\e[0m\n" "$logoLine"
 				colorIndex=$(( (colorIndex + 1) % numColors ))
 			else
-				printf "%s\n" "$logo_line"
+				printf "%s\n" "$logoLine"
 			fi
 		fi
 	done < "$logoFile"
 
-	while IFS= read -r cfg_line <&3; do
-		printf "%-${maxLenght}s%s\n" "" "$cfg_line"
+	while IFS= read -r cfgLine <&3; do
+		printf "%-${maxLenght}s%s\n" "" "$cfgLine"
 	done
 
 	exec 3<&-
-	rm "$tmp_cfg"
+	rm "$tmpCfg"
 }
 
 # Get system information

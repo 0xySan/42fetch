@@ -3,7 +3,7 @@
 # 42fetch - A simple system information tool written in shell
 
 # Define constants
-_HOME_DIR=$(eval echo "~$USER")
+_HOME_DIR=$(eval echo "~")
 _CONFIG_FOLDER=""
 _PROGRAM_NAME="42fetch"
 _COLORS_FILE="./data/colors.conf"

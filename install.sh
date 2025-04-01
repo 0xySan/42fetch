@@ -1,4 +1,4 @@
-_HOME_DIR=$(eval echo "~$USER")
+_HOME_DIR=$(eval echo "~")
 
 [ -e "$_HOME_DIR/bin" ] || mkdir "$_HOME_DIR/bin"
 
@@ -13,6 +13,8 @@ cp -r data "$_HOME_DIR/.config/42fetch"
 cp -r logo "$_HOME_DIR/.config/42fetch"
 
 cp 42fetch.sh "$_HOME_DIR/bin/42fetch"
+
+chmod +x "$_HOME_DIR/bin/42fetch"
 
 sed -i '8i _CONFIG_FOLDER="$_HOME_DIR/.config/42fetch"' $_HOME_DIR/bin/42fetch
 

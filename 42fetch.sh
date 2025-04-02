@@ -276,8 +276,96 @@ GetMaxLineLength()
 	echo "$((maxLenght + 2))"
 }
 
-ApplyColors()
-{
+# ApplyColors()
+# {
+# 	set -- $_colors
+# 	numColors=$#
+# 	i=0
+# 	if [ -n "$_flag" ]; then
+# 		while [ "$i" -lt 10 ]; do
+# 			logoLine=$(echo "$logoLine" | sed "s/\${$i}//g")
+# 			i=$((i + 1))
+# 		done
+# 	else
+# 		while [ "$i" -lt 10 ]; do
+# 			currentColor=$(eval echo "\$$((i + 1))")
+# 			logoLine=$(echo "$logoLine" | sed "s/\${$i}/\\\e[38;2;${currentColor}m/g")
+# 			i=$((i + 1))
+# 		done
+
+# 	fi
+# }
+
+# PrintLogoWithCfg()
+# {
+# 	local logoFile="$1"
+# 	local cfgFile="$_configFile"
+# 	local maxLenght
+# 	maxLenght=$(GetMaxLineLength "$logoFile")
+	
+# 	export user="$(GetUser)"
+# 	export hostmachine="$(GetHostname)"
+# 	export lengthuh="$(GetLengthUserHost)"
+# 	export os="$(GetDistro)"
+# 	export kernel="$(GetKernel)"
+# 	export uptime="$(GetUptime)"
+# 	export packages="$(GetPackages)"
+# 	export shell="$(GetShell)"
+# 	export resolution="$(GetResolution)"
+# 	export de="$(GetDE)"
+# 	export terminal="$(GetTerminal)"
+# 	export cpu="$(GetCpu)"
+# 	export gpu="$(GetGPU)"
+# 	export memory="$(GetUsedMemory) / $(GetFullMemory)"
+# 	export ip="$ipAddress"
+# 	export pip="$publicIp"
+# 	export lastboot="$lastBoot"
+# 	export pc="$processCount"
+# 	export root="$rootPartition"
+# 	export home="$homePartition"
+
+# 	local tmpCfg
+# 	tmpCfg=$(mktemp)
+# 	envsubst < "$cfgFile" > "$tmpCfg"
+# 	exec 3< "$tmpCfg"
+
+# 	GetColors
+# 	set -- $_colors
+# 	local colorIndex=0
+# 	local numColors=$#
+# 	while IFS= read -r logoLine; do
+# 		if IFS= read -r cfgLine <&3; then
+# 			if [ -n "$_flag" ] && [ -n "$_colors" ]; then
+# 				currentColor=$(eval echo "\$$((colorIndex + 1))")
+# 				ApplyColors
+# 				printf "\e[38;2;${currentColor}m%-${maxLenght}s\e[0m%s\n" "$logoLine" "$cfgLine"
+# 				colorIndex=$(( (colorIndex + 1) % numColors ))
+# 			else
+# 				ApplyColors
+# 				printf "\e[38;2;$(eval echo "\$1")m%-${maxLenght}s\e[0m%s\n" "$logoLine" "$cfgLine"
+# 			fi
+# 		else
+# 			if [ -n "$_flag" ] && [ -n "$_colors" ]; then
+# 				currentColor=$(eval echo "\$$((colorIndex + 1))")
+# 				ApplyColors
+# 				printf "\e[38;2;${currentColor}m%-${maxLenght}s\e[0m\n" "$logoLine"
+# 				colorIndex=$(( (colorIndex + 1) % numColors ))
+# 			else
+# 				ApplyColors
+# 				printf "\e[38;2;$(eval echo "\$1")m%-${maxLenght}s\e[0m%s\n" "$logoLine"
+# 			fi
+# 		fi
+# 	done < "$logoFile"
+
+# 	while IFS= read -r cfgLine <&3; do
+# 		printf "%-${maxLenght}s%s\n" "" "$cfgLine"
+# 	done
+
+# 	exec 3<&-
+# 	rm "$tmpCfg"
+# }
+
+ApplyColors() {
 	set -- $_colors
 	numColors=$#
 	i=0
@@ -289,11 +377,19 @@ ApplyColors()
 	else
 		while [ "$i" -lt 10 ]; do
 			currentColor=$(eval echo "\$$((i + 1))")
-			logoLine=$(echo "$logoLine" | sed "s/\${$i}/\\\e[38;2;${currentColor}m/g")
+			colorSeq=$(printf '\033[38;2;%sm' "${currentColor}")
+			logoLine=$(echo "$logoLine" | sed "s/\${$i}/${colorSeq}/g")
 			i=$((i + 1))
 		done
-
 	fi
+	defaultColor=$(printf '\033[38;2;%sm' "$(echo "$_colors" | awk '{print $1}')")
+	if [[ "$logoLine" != $'\033'* ]]; then
+		logoLine="${defaultColor}${logoLine}"
+	fi
+}
+
+strip_ansi() {
+	sed -r 's/\x1B\[[0-9;]*m//g'
 }
 
 PrintLogoWithCfg()
@@ -338,27 +434,47 @@ PrintLogoWithCfg()
 			if [ -n "$_flag" ] && [ -n "$_colors" ]; then
 				currentColor=$(eval echo "\$$((colorIndex + 1))")
 				ApplyColors
-				printf "\e[38;2;${currentColor}m%-${maxLenght}s\e[0m%s\n" "$logoLine" "$cfgLine"
+				visibleLogo=$(printf "%b" "$logoLine" | strip_ansi)
+				visibleLen=${#visibleLogo}
+				padLen=$(( maxLenght - visibleLen ))
+				[ $padLen -lt 0 ] && padLen=0
+				padding=$(printf "%*s" "$padLen" "")
+				printf "%b%s\e[0m\t%s\n" "$logoLine" "$padding" "$cfgLine"
 				colorIndex=$(( (colorIndex + 1) % numColors ))
 			else
 				ApplyColors
-				printf "\e[38;2;$(eval echo "\$1")m%-${maxLenght}s\e[0m%s\n" "$logoLine" "$cfgLine"
+				visibleLogo=$(printf "%b" "$logoLine" | strip_ansi)
+				visibleLen=${#visibleLogo}
+				padLen=$(( maxLenght - visibleLen ))
+				[ $padLen -lt 0 ] && padLen=0
+				padding=$(printf "%*s" "$padLen" "")
+				printf "%b%s\e[0m\t%s\n" "$logoLine" "$padding" "$cfgLine"
 			fi
 		else
 			if [ -n "$_flag" ] && [ -n "$_colors" ]; then
 				currentColor=$(eval echo "\$$((colorIndex + 1))")
 				ApplyColors
-				printf "\e[38;2;${currentColor}m%-${maxLenght}s\e[0m\n" "$logoLine"
+				visibleLogo=$(printf "%b" "$logoLine" | strip_ansi)
+				visibleLen=${#visibleLogo}
+				padLen=$(( maxLenght - visibleLen ))
+				[ $padLen -lt 0 ] && padLen=0
+				padding=$(printf "%*s" "$padLen" "")
+				printf "%b%s\e[0m\t%s\n" "$logoLine" "$padding"
 				colorIndex=$(( (colorIndex + 1) % numColors ))
 			else
 				ApplyColors
-				printf "\e[38;2;$(eval echo "\$1")m%-${maxLenght}s\e[0m%s\n" "$logoLine"
+				visibleLogo=$(printf "%b" "$logoLine" | strip_ansi)
+				visibleLen=${#visibleLogo}
+				padLen=$(( maxLenght - visibleLen ))
+				[ $padLen -lt 0 ] && padLen=0
+				padding=$(printf "%*s" "$padLen" "")
+				printf "%b%s\e[0m\t%s\n" "$logoLine" "$padding"
 			fi
 		fi
 	done < "$logoFile"
 
 	while IFS= read -r cfgLine <&3; do
-		printf "%-${maxLenght}s%s\n" "" "$cfgLine"
+		printf "%-${maxLenght}s\t%s\n" "" "$cfgLine"
 	done
 
 	exec 3<&-

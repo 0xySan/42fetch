@@ -707,37 +707,62 @@ _TOKEN=""
 _LOGIN=$(whoami)
 _LEVEL=""
 _USER=""
+_CAMPUS=""
 
 RefreshToken() {
 	export $(grep -v '^#' .env | xargs)
-	_TOKEN=$(curl -X POST "https://api.intra.42.fr/oauth/token" \
+	_TOKEN=$(curl -s -X POST "https://api.intra.42.fr/oauth/token" \
 		-d "grant_type=client_credentials" \
 		-d "client_id=$UID" \
 		-d "client_secret=$SECRET" | awk -F'"' '{print $4}')
+	echo $_TOKEN
 }
 
 GetUser() {
-	_USER=$(curl -X GET "https://api.intra.42.fr/v2/users/$_LOGIN" -H "Authorization: Bearer $_TOKEN")
+	_USER=$(curl -s -X GET "https://api.intra.42.fr/v2/users/$_LOGIN" -H "Authorization: Bearer $_TOKEN")
 }
 
 GetLevel()
 {
 	_LEVEL=$(echo $_USER | jq '.cursus_users[] | select(.cursus_id == 21) | .level')
 	printf "Level: $_LEVEL\n"
-	# Extract the decimal part and multiply by 2 to scale it
 	decimal_part=$(echo "$_LEVEL" | awk -F'.' '{print $2}')
-	progress=$(echo "$decimal_part / 5" | bc)  # Rounding it and scaling to 20
+	progress=$(echo "$decimal_part / 5" | bc)
 	UNFILLED=$(( 20 - progress ))
 	bar=$(printf "%-${progress}s" "#" | tr ' ' '#')
 	empty=$(printf "%-${UNFILLED}s" " " | tr ' ' '-')
 	echo "Progress: [${bar}${empty}] ${_LEVEL}/10"
 }
 
+GetSession()
+{
+	userId=$(echo "$_USER" | jq '.id')
+	_SESSION=$(curl -s -X GET "https://api.intra.42.fr/v2/users/$userId/locations?page%5Bsize%5D=1" -H "Authorization: Bearer $_TOKEN")
 
+	session_host=$(echo "$_SESSION" | jq -r '.[0].host // empty')
+	begin_at=$(echo "$_SESSION" | jq -r '.[0].begin_at // empty')
 
+	if [ -z "$session_host" ]; then
+		echo "Session: No active session found."
+	else
+		start_timestamp=$(date -d "$begin_at" +%s)
+		current_timestamp=$(date +%s)
+		session_duration=$((current_timestamp - start_timestamp))
+
+		hours=$((session_duration / 3600))
+		minutes=$(((session_duration % 3600) / 60))
+		seconds=$((session_duration % 60))
+
+		printf "Session: %s (Duration: %02dh %02dm %02ds)\n" "$session_host" "$hours" "$minutes" "$seconds"
+	fi
+}
 
 
 RefreshToken
 GetUser
 GetLevel
-printf "Hi $_LOGIN, you have $(echo $_USER | jq '.correction_point') points and $(echo $_USER | jq '.wallet') coins\n"
+GetSession
+
+
+
+printf "Hi $_LOGIN, you have $(echo $_USER | jq '.correction_point') points and $(echo $_USER | jq '.wallet') wallets\n"

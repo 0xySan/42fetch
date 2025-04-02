@@ -382,7 +382,7 @@ ApplyColors()
 		done
 		if [ -n "$_colors" ]; then
 			defaultColor=$(printf '\033[38;2;%sm' "$(echo "$_colors" | awk '{print $1}')")
-			if [[ "$logoLine" != $'\033'* ]]; then
+			if [ "$logoLine" != $'\033'* ]; then
 				logoLine="${defaultColor}${logoLine}"
 			fi
 		fi

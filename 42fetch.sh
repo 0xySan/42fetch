@@ -700,3 +700,44 @@ fi
 
 # Render
 PrintLogoWithCfg "$_logoFinal"
+
+
+#42 api
+_TOKEN=""
+_LOGIN=$(whoami)
+_LEVEL=""
+_USER=""
+
+RefreshToken() {
+	export $(grep -v '^#' .env | xargs)
+	_TOKEN=$(curl -X POST "https://api.intra.42.fr/oauth/token" \
+		-d "grant_type=client_credentials" \
+		-d "client_id=$UID" \
+		-d "client_secret=$SECRET" | awk -F'"' '{print $4}')
+}
+
+GetUser() {
+	_USER=$(curl -X GET "https://api.intra.42.fr/v2/users/$_LOGIN" -H "Authorization: Bearer $_TOKEN")
+}
+
+GetLevel()
+{
+	_LEVEL=$(echo $_USER | jq '.cursus_users[] | select(.cursus_id == 21) | .level')
+	printf "Level: $_LEVEL\n"
+	# Extract the decimal part and multiply by 2 to scale it
+	decimal_part=$(echo "$_LEVEL" | awk -F'.' '{print $2}')
+	progress=$(echo "$decimal_part / 5" | bc)  # Rounding it and scaling to 20
+	UNFILLED=$(( 20 - progress ))
+	bar=$(printf "%-${progress}s" "#" | tr ' ' '#')
+	empty=$(printf "%-${UNFILLED}s" " " | tr ' ' '-')
+	echo "Progress: [${bar}${empty}] ${_LEVEL}/10"
+}
+
+
+
+
+
+RefreshToken
+GetUser
+GetLevel
+printf "Hi $_LOGIN, you have $(echo $_USER | jq '.correction_point') points and $(echo $_USER | jq '.wallet') coins\n"

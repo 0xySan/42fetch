@@ -365,30 +365,32 @@ GetMaxLineLength()
 # 	rm "$tmpCfg"
 # }
 
-ApplyColors() {
-	set -- $_colors
-	numColors=$#
-	i=0
+ApplyColors()
+{
 	if [ -n "$_flag" ]; then
-		while [ "$i" -lt 10 ]; do
-			logoLine=$(echo "$logoLine" | sed "s/\${$i}//g")
-			i=$((i + 1))
-		done
+		logoLine=$(echo "$logoLine" | sed -E 's/\$\{[0-9]+\}//g')
+		logoLine=$(printf '\033[38;2;%sm%s' "$currentColor" "$logoLine")
 	else
+		set -- $_colors
+		numColors=$#
+		i=0
 		while [ "$i" -lt 10 ]; do
 			currentColor=$(eval echo "\$$((i + 1))")
-			colorSeq=$(printf '\033[38;2;%sm' "${currentColor}")
-			logoLine=$(echo "$logoLine" | sed "s/\${$i}/${colorSeq}/g")
+			colorSeq=$(printf '\033[38;2;%sm' "$currentColor")
+			logoLine=$(echo "$logoLine" | sed "s/\${$i}/$colorSeq/g")
 			i=$((i + 1))
 		done
-	fi
-	defaultColor=$(printf '\033[38;2;%sm' "$(echo "$_colors" | awk '{print $1}')")
-	if [[ "$logoLine" != $'\033'* ]]; then
-		logoLine="${defaultColor}${logoLine}"
+		if [ -n "$_colors" ]; then
+			defaultColor=$(printf '\033[38;2;%sm' "$(echo "$_colors" | awk '{print $1}')")
+			if [[ "$logoLine" != $'\033'* ]]; then
+				logoLine="${defaultColor}${logoLine}"
+			fi
+		fi
 	fi
 }
 
-strip_ansi() {
+strip_ansi()
+{
 	sed -r 's/\x1B\[[0-9;]*m//g'
 }
 
@@ -454,21 +456,11 @@ PrintLogoWithCfg()
 			if [ -n "$_flag" ] && [ -n "$_colors" ]; then
 				currentColor=$(eval echo "\$$((colorIndex + 1))")
 				ApplyColors
-				visibleLogo=$(printf "%b" "$logoLine" | strip_ansi)
-				visibleLen=${#visibleLogo}
-				padLen=$(( maxLenght - visibleLen ))
-				[ $padLen -lt 0 ] && padLen=0
-				padding=$(printf "%*s" "$padLen" "")
-				printf "%b%s\e[0m\t%s\n" "$logoLine" "$padding"
+				printf "%b%s\e[0m\t%s\n" "$logoLine"
 				colorIndex=$(( (colorIndex + 1) % numColors ))
 			else
 				ApplyColors
-				visibleLogo=$(printf "%b" "$logoLine" | strip_ansi)
-				visibleLen=${#visibleLogo}
-				padLen=$(( maxLenght - visibleLen ))
-				[ $padLen -lt 0 ] && padLen=0
-				padding=$(printf "%*s" "$padLen" "")
-				printf "%b%s\e[0m\t%s\n" "$logoLine" "$padding"
+				printf "%b%s\e[0m\t%s\n" "$logoLine"
 			fi
 		fi
 	done < "$logoFile"

@@ -8,6 +8,9 @@ _CONFIG_FOLDER=""
 _PROGRAM_NAME="42fetch"
 _FLAG_COLORS_FILE="./data/flag.conf"
 _LOGO_COLORS_FILE="./data/logo.conf"
+_TOKEN=""
+_SESSION=""
+_LOGIN=$(whoami)
 
 if [ -z "$_CONFIG_FOLDER" ]; then
 	_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -274,6 +277,59 @@ GetMaxLineLength()
 	echo "$((maxLenght + 2))"
 }
 
+#42 api
+
+RefreshToken() {
+	export $(grep -v '^#' "$_SCRIPT_DIR/.env" | xargs)
+	_TOKEN=$(curl -s -X POST "https://api.intra.42.fr/oauth/token" \
+		-d "grant_type=client_credentials" \
+		-d "client_id=$UID" \
+		-d "client_secret=$SECRET" | awk -F'"' '{print $4}')
+	echo "$_TOKEN"
+}
+
+Get42User() {
+	_USER=$(curl -s -X GET "https://api.intra.42.fr/v2/users/$_LOGIN" -H "Authorization: Bearer $1")
+	echo "$_USER"
+}
+
+GetLevel()
+{
+	decimalPart=$(echo "$1" | awk -F'.' '{print $2}')
+	progress=$(echo "$decimalPart / 5" | bc)
+	unfilled=$(( 20 - progress ))
+	bar=$(printf "%-${progress}s" "#" | tr ' ' '#')
+	empty=$(printf "%-${unfilled}s" "-" | tr ' ' '-')
+	echo "[${bar}${empty}]"
+}
+
+GetSession()
+{
+	userId=$(echo "$1" | jq '.id')
+	_SESSION=$(curl -s -X GET "https://api.intra.42.fr/v2/users/$userId/locations?page%5Bsize%5D=1" -H "Authorization: Bearer $2")
+	echo "$_SESSION"
+}
+
+GetDuration()
+{
+	sessionHost=$(echo "$1" | jq -r '.[0].host // empty')
+	beginAt=$(echo "$1" | jq -r '.[0].begin_at // empty')
+
+	if [ -z "$sessionHost" ]; then
+		echo "Session: No active session found."
+	else
+		startTimestamp=$(date -d "$beginAt" +%s)
+		currentTimestamp=$(date +%s)
+		sessionDuration=$((currentTimestamp - startTimestamp))
+
+		hours=$((sessionDuration / 3600))
+		minutes=$(((sessionDuration % 3600) / 60))
+		seconds=$((sessionDuration % 60))
+
+		printf "%02dh %02dm %02ds" "$hours" "$minutes" "$seconds"
+	fi
+}
+
 ApplyColors()
 {
 	if [ -n "$_flag" ]; then
@@ -309,7 +365,6 @@ PrintLogoWithCfg()
 	local cfgFile="$_configFile"
 	local maxLenght
 	maxLenght=$(GetMaxLineLength "$logoFile")
-
 	local tmpCfg
 	tmpCfg=$(mktemp)
 
@@ -340,6 +395,25 @@ PrintLogoWithCfg()
 			"\$home") export home="$(GetHomePartition)" ;;
 		esac
 	done
+
+	if [ ! -f "$_SCRIPT_DIR/.env" ]; then
+		export level="Unavailable"
+		export progressBar="Unavailable"
+		export session="Unavailable"
+		export duration="Unavailable"
+		export correctionPts="Unavailable"
+		export wallets="Unavailable"
+	else
+		token=$(RefreshToken)
+		user42=$(Get42User "$token")
+		session42=$(GetSession "$user42" "$token")
+		export level=$(echo $user42 | jq '.cursus_users[] | select(.cursus_id == 21) | .level')
+		export progressBar=$(GetLevel $level)
+		export session=$(echo "$session42" | jq -r '.[0].host // empty')
+		export duration=$(GetDuration "$session42")
+		export correctionPts=$(echo $user42 | jq '.correction_point')
+		export wallets=$(echo $user42 | jq '.wallet')
+	fi
 
 	envsubst < "$cfgFile" > "$tmpCfg"
 	exec 3< "$tmpCfg"
@@ -636,7 +710,7 @@ GetHomePartition()
 {
 	homePartition=$(df -h --output=target,used,avail,pcent | grep '/home' | awk '{print $2 " " $3 " " $4}')
 
-	printf "$homePartition"
+	echo "$homePartition"
 }
 
 GetCpuUsage()

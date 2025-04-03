@@ -36,7 +36,7 @@ chmod +x "$_HOME_DIR/bin/42fetch"
 sed -i '8i _CONFIG_FOLDER="$_HOME_DIR/.config/42fetch"' $_HOME_DIR/bin/42fetch
 
 if [ -n "$CURL" ] && [ "$CURL" = "true" ]; then
-	printf "Using curl to download 42fetch, cannot read input from terminal.\n If you want to use 42fetch everytime you launch a term, please add it to your .zshrc or .bashrc manually."
+	printf "Using curl to download 42fetch, cannot read input from terminal.\nIf you want to use 42fetch everytime you launch a term, please add it to your .zshrc or .bashrc manually.\n"
 else
 	echo "Would you like to run 42fetch everytime you launch a term? (y/N) default: yes"
 fi
@@ -53,4 +53,4 @@ if [ "$input" = "y" ] || [ "$input" = "" ] && [ ! -n "$CURL" ] ; then
 	fi
 fi
 
-echo "42fetch installed successfully!"
+printf "42fetch installed successfully!"

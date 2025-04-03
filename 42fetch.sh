@@ -276,95 +276,6 @@ GetMaxLineLength()
 	echo "$((maxLenght + 2))"
 }
 
-# ApplyColors()
-# {
-# 	set -- $_colors
-# 	numColors=$#
-# 	i=0
-# 	if [ -n "$_flag" ]; then
-# 		while [ "$i" -lt 10 ]; do
-# 			logoLine=$(echo "$logoLine" | sed "s/\${$i}//g")
-# 			i=$((i + 1))
-# 		done
-# 	else
-# 		while [ "$i" -lt 10 ]; do
-# 			currentColor=$(eval echo "\$$((i + 1))")
-# 			logoLine=$(echo "$logoLine" | sed "s/\${$i}/\\\e[38;2;${currentColor}m/g")
-# 			i=$((i + 1))
-# 		done
-
-# 	fi
-# }
-
-# PrintLogoWithCfg()
-# {
-# 	local logoFile="$1"
-# 	local cfgFile="$_configFile"
-# 	local maxLenght
-# 	maxLenght=$(GetMaxLineLength "$logoFile")
-	
-# 	export user="$(GetUser)"
-# 	export hostmachine="$(GetHostname)"
-# 	export lengthuh="$(GetLengthUserHost)"
-# 	export os="$(GetDistro)"
-# 	export kernel="$(GetKernel)"
-# 	export uptime="$(GetUptime)"
-# 	export packages="$(GetPackages)"
-# 	export shell="$(GetShell)"
-# 	export resolution="$(GetResolution)"
-# 	export de="$(GetDE)"
-# 	export terminal="$(GetTerminal)"
-# 	export cpu="$(GetCpu)"
-# 	export gpu="$(GetGPU)"
-# 	export memory="$(GetUsedMemory) / $(GetFullMemory)"
-# 	export ip="$ipAddress"
-# 	export pip="$publicIp"
-# 	export lastboot="$lastBoot"
-# 	export pc="$processCount"
-# 	export root="$rootPartition"
-# 	export home="$homePartition"
-
-# 	local tmpCfg
-# 	tmpCfg=$(mktemp)
-# 	envsubst < "$cfgFile" > "$tmpCfg"
-# 	exec 3< "$tmpCfg"
-
-# 	GetColors
-# 	set -- $_colors
-# 	local colorIndex=0
-# 	local numColors=$#
-# 	while IFS= read -r logoLine; do
-# 		if IFS= read -r cfgLine <&3; then
-# 			if [ -n "$_flag" ] && [ -n "$_colors" ]; then
-# 				currentColor=$(eval echo "\$$((colorIndex + 1))")
-# 				ApplyColors
-# 				printf "\e[38;2;${currentColor}m%-${maxLenght}s\e[0m%s\n" "$logoLine" "$cfgLine"
-# 				colorIndex=$(( (colorIndex + 1) % numColors ))
-# 			else
-# 				ApplyColors
-# 				printf "\e[38;2;$(eval echo "\$1")m%-${maxLenght}s\e[0m%s\n" "$logoLine" "$cfgLine"
-# 			fi
-# 		else
-# 			if [ -n "$_flag" ] && [ -n "$_colors" ]; then
-# 				currentColor=$(eval echo "\$$((colorIndex + 1))")
-# 				ApplyColors
-# 				printf "\e[38;2;${currentColor}m%-${maxLenght}s\e[0m\n" "$logoLine"
-# 				colorIndex=$(( (colorIndex + 1) % numColors ))
-# 			else
-# 				ApplyColors
-# 				printf "\e[38;2;$(eval echo "\$1")m%-${maxLenght}s\e[0m%s\n" "$logoLine"
-# 			fi
-# 		fi
-# 	done < "$logoFile"
-
-# 	while IFS= read -r cfgLine <&3; do
-# 		printf "%-${maxLenght}s%s\n" "" "$cfgLine"
-# 	done
-
-# 	exec 3<&-
-# 	rm "$tmpCfg"
-# }
-
 ApplyColors()
 {
 	if [ -n "$_flag" ]; then
@@ -400,30 +311,38 @@ PrintLogoWithCfg()
 	local cfgFile="$_configFile"
 	local maxLenght
 	maxLenght=$(GetMaxLineLength "$logoFile")
-	
-	export user="$(GetUser)"
-	export hostmachine="$(GetHostname)"
-	export lengthuh="$(GetLengthUserHost)"
-	export os="$(GetDistro)"
-	export kernel="$(GetKernel)"
-	export uptime="$(GetUptime)"
-	export packages="$(GetPackages)"
-	export shell="$(GetShell)"
-	export resolution="$(GetResolution)"
-	export de="$(GetDE)"
-	export terminal="$(GetTerminal)"
-	export cpu="$(GetCpu)"
-	export gpu="$(GetGPU)"
-	export memory="$(GetUsedMemory) / $(GetFullMemory)"
-	export ip="$ipAddress"
-	export pip="$publicIp"
-	export lastboot="$lastBoot"
-	export pc="$processCount"
-	export root="$rootPartition"
-	export home="$homePartition"
 
 	local tmpCfg
 	tmpCfg=$(mktemp)
+
+	local needed_vars=$(grep -oE '\$(user|hostmachine|lengthuh|os|kernel|uptime|packages|shell|resolution|de|terminal|cpu|gpu|memory|ip|pip|lastboot|pc|root|home)' "$cfgFile" | sort -u)
+	
+	for var in $needed_vars; do
+		case "$var" in
+			"\$user") export user="$(GetUser)" ;;
+			"\$hostmachine") export hostmachine="$(GetHostname)" ;;
+			"\$lengthuh") export lengthuh="$(GetLengthUserHost)" ;;
+			"\$os") export os="$(GetDistro)" ;;
+			"\$kernel") export kernel="$(GetKernel)" ;;
+			"\$uptime") export uptime="$(GetUptime)" ;;
+			"\$packages") export packages="$(GetPackages)" ;;
+			"\$shell") export shell="$(GetShell)" ;;
+			"\$resolution") export resolution="$(GetResolution)" ;;
+			"\$de") export de="$(GetDE)" ;;
+			"\$terminal") export terminal="$(GetTerminal)" ;;
+			"\$cpu") export cpu="$(GetCpu)" ;;
+			"\$cpuusage") export cpu="$(GetCpuUsage)" ;;
+			"\$gpu") export gpu=$(GetGPU) ;;
+			"\$memory") export memory="$(GetUsedMemory) / $(GetFullMemory)" ;;
+			"\$ip") export ip="$(GetIpAddress)" ;;
+			"\$pip") export pip="$(GetPublicIp)" ;;
+			"\$lastboot") export lastboot="$(GetLastBoot)" ;;
+			"\$pc") export pc="$(GetProcessCount)" ;;
+			"\$root") export root="$(GetRootPartition)" ;;
+			"\$home") export home="$(GetHomePartition)" ;;
+		esac
+	done
+
 	envsubst < "$cfgFile" > "$tmpCfg"
 	exec 3< "$tmpCfg"
 
@@ -680,13 +599,54 @@ GetUsedMemory()
 	printf "$used_memory Mib"
 }
 
-ipAddress=$(CommandExists hostname && (hostname -i || hostname -I) | awk '{print $1}' || echo "Unavailable")
-publicIp=$(CommandExists curl && curl -s ifconfig.me || echo "Unavailable")
-lastBoot=$(CommandExists who && who -b | awk '{print $3, $4}' || echo "Unavailable")
-processCount=$(ps aux | wc -l)
-rootPartition=$(df -h --output=target,used,avail,pcent | grep '/ ' | awk '{print $2 " " $3 " " $4}')
-homePartition=$(df -h --output=target,used,avail,pcent | grep '/home' | awk '{print $2 " " $3 " " $4}')
-cpuUsage=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8 "%"}')
+GetIpAddress()
+{
+	ipAddress=$(CommandExists hostname && (hostname -i || hostname -I) | awk '{print $1}' || echo "Unavailable")
+	
+	printf "$ipAddress"
+}
+
+GetPublicIp()
+{
+	publicIp=$(CommandExists curl && curl -s ifconfig.me || echo "Unavailable")
+
+	printf "$publicIp"
+}
+
+GetLastBoot()
+{
+	lastBoot=$(CommandExists who && who -b | awk '{print $3, $4}' || echo "Unavailable")
+
+	printf "$lastBoot"
+}
+
+GetProcessCount()
+{
+	processCount=$(ps aux | wc -l)
+
+	printf "$processCount"
+}
+
+GetRootPartition()
+{
+	rootPartition=$(df -h --output=target,used,avail,pcent | grep '/ ' | awk '{print $2 " " $3 " " $4}')
+
+	echo "$rootPartition"
+}
+
+GetHomePartition()
+{
+	homePartition=$(df -h --output=target,used,avail,pcent | grep '/home' | awk '{print $2 " " $3 " " $4}')
+
+	printf "$homePartition"
+}
+
+GetCpuUsage()
+{
+	cpuUsage=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8 "%"}')
+
+	printf "$cpuUsage"
+}
 
 _logo="$_SCRIPT_DIR/logo/"$(getLogoFile $_logo)
 

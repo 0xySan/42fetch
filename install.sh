@@ -1,5 +1,10 @@
 _HOME_DIR=$(eval echo "~")
 
+if [ -e "$_HOME_DIR/bin/42fetch" ]; then
+    echo "42fetch is already installed in $_HOME_DIR/bin/42fetch"
+    exit 1
+fi
+
 [ -e "$_HOME_DIR/bin" ] || mkdir "$_HOME_DIR/bin"
 
 if [ -e "$_HOME_DIR/.config" ]; then
@@ -22,7 +27,7 @@ echo "Would you like to run 42fetch everytime you launch a term? (y/N)"
 
 read input
 
-if [ "$input" = "y" ]; then
+if [ "$input" = "y" ] || [ "$input" = "yes" ]; then
     if [ -e "$_HOME_DIR/.zshrc" ]; then
         echo "42fetch" >> "$_HOME_DIR/.zshrc"
         echo "42fetch added to .zshrc"
@@ -30,6 +35,10 @@ if [ "$input" = "y" ]; then
         echo "42fetch" >> "$_HOME_DIR/.bashrc"
         echo "42fetch added to .bashrc"
     fi
+fi
+
+if [ "$1" = "1" ]; then
+    exit 0
 fi
 
 echo "42fetch installed successfully!"

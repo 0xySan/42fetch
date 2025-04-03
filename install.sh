@@ -1,23 +1,25 @@
 _HOME_DIR=$(eval echo "~")
 
-if [ -e "$_HOME_DIR/bin/42fetch" ]; then
-    echo "42fetch is already installed in $_HOME_DIR/bin/42fetch"
-    exit 1
-fi
-
 [ -e "$_HOME_DIR/bin" ] || mkdir "$_HOME_DIR/bin"
 
 if [ -e "$_HOME_DIR/.config" ]; then
-    mkdir -p "$_HOME_DIR/.config/42fetch"
+	mkdir -p "$_HOME_DIR/.config/42fetch"
 else
-    mkdir "$_HOME_DIR/.config"
-    mkdir "$_HOME_DIR/.config/42fetch"
+	mkdir "$_HOME_DIR/.config"
+	mkdir "$_HOME_DIR/.config/42fetch"
 fi
 
-cp -r data "$_HOME_DIR/.config/42fetch"
-cp -r logo "$_HOME_DIR/.config/42fetch"
-
-cp 42fetch.sh "$_HOME_DIR/bin/42fetch"
+if [ -n "$CURL" ] && [ "$CURL" = "true" ]; then
+	git clone https://github.com/0xySan/42fetch.git tmp
+	cp -r tmp/data "$_HOME_DIR/.config/42fetch"
+	cp -r tmp/logo "$_HOME_DIR/.config/42fetch"
+	cp tmp/42fetch.sh "$_HOME_DIR/bin/42fetch"
+	rm -rf tmp
+else
+	cp -r data "$_HOME_DIR/.config/42fetch"
+	cp -r logo "$_HOME_DIR/.config/42fetch"
+	cp 42fetch.sh "$_HOME_DIR/bin/42fetch"
+fi
 
 chmod +x "$_HOME_DIR/bin/42fetch"
 
@@ -27,18 +29,14 @@ echo "Would you like to run 42fetch everytime you launch a term? (y/N)"
 
 read input
 
-if [ "$input" = "y" ] || [ "$input" = "yes" ]; then
-    if [ -e "$_HOME_DIR/.zshrc" ]; then
-        echo "42fetch" >> "$_HOME_DIR/.zshrc"
-        echo "42fetch added to .zshrc"
-    elif [ -e "$_HOME_DIR/.bashrc" ]; then
-        echo "42fetch" >> "$_HOME_DIR/.bashrc"
-        echo "42fetch added to .bashrc"
-    fi
-fi
-
-if [ "$1" = "1" ]; then
-    exit 0
+if [ "$input" = "y" ]; then
+	if [ -e "$_HOME_DIR/.zshrc" ]; then
+		echo "42fetch" >> "$_HOME_DIR/.zshrc"
+		echo "42fetch added to .zshrc"
+	elif [ -e "$_HOME_DIR/.bashrc" ]; then
+		echo "42fetch" >> "$_HOME_DIR/.bashrc"
+		echo "42fetch added to .bashrc"
+	fi
 fi
 
 echo "42fetch installed successfully!"

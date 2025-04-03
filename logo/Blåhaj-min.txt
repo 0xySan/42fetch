@@ -13,9 +13,9 @@
  oxodddddoooooolllllllolooooollloooollllolllllloooolccl;
 'x:::cclccllllccccccccccclllclllllllllllllllll     .;;cl;
  d;c::cc:cc:::;::c:c:cccccclccc:cccclllllll,         .:cl.
-  c;,;:;;::::;;::::c..,cccllcc:c;;:lloodk.
-    'ooooooooodddxxkkkOOOkOOOOOOc:cclllloo'
-       .XXXXXXXKKXXXXXXXXXXXXXXXkcccclcccllo,
-             ,KKKKKXXXXXXXXXXXXK0.  .:ccllclll;.
+  c;,;:;;::::;;::::c${3}.${2}.${3},${0}cccllcc:c;;:lloodk.
+    ${2}'ooooooooodddxxkkkOOOkOOOOOO${0}c:cclllloo'
+       ${2}.XXX${1}XXXXKK${2}XXXXXXXXXXXXXXXk${0}cccclcccllo,
+             ${1},KKKKK${2}XXXXXXXXXXXXK0.${0}  .:ccllclll;.
                                        .ccccccllc,.
                                              :::cl:

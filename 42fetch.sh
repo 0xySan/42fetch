@@ -301,7 +301,7 @@ GetLevel()
 	progress=$(echo "$decimalPart / 5" | bc)
 	unfilled=$(( 20 - progress ))
 	bar=$(printf "%-${progress}s" "#" | tr ' ' '#')
-	empty=$(printf "%-${unfiled}s" " " | tr ' ' '-')
+	empty=$(printf "%-${unfilled}s" "-" | tr ' ' '-')
 	echo "[${bar}${empty}]"
 }
 
@@ -328,7 +328,7 @@ GetDuration()
 		minutes=$(((sessionDuration % 3600) / 60))
 		seconds=$((sessionDuration % 60))
 
-		printf "%02dh %02dm %02ds)\n" "$hours" "$minutes" "$seconds"
+		printf "%02dh %02dm %02ds" "$hours" "$minutes" "$seconds"
 	fi
 }
 

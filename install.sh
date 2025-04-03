@@ -10,15 +10,15 @@ else
 fi
 
 if [ -n "$CURL" ] && [ "$CURL" = "true" ]; then
+	cp -r data "$_HOME_DIR/.config/42fetch"
+	cp -r logo "$_HOME_DIR/.config/42fetch"
+	cp 42fetch.sh "$_HOME_DIR/bin/42fetch"
+else
 	git clone https://github.com/0xySan/42fetch.git tmp
 	cp -r tmp/data "$_HOME_DIR/.config/42fetch"
 	cp -r tmp/logo "$_HOME_DIR/.config/42fetch"
 	cp tmp/42fetch.sh "$_HOME_DIR/bin/42fetch"
 	rm -rf tmp
-else
-	cp -r data "$_HOME_DIR/.config/42fetch"
-	cp -r logo "$_HOME_DIR/.config/42fetch"
-	cp 42fetch.sh "$_HOME_DIR/bin/42fetch"
 fi
 
 chmod +x "$_HOME_DIR/bin/42fetch"

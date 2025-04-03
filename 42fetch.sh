@@ -160,8 +160,7 @@ GetLogo()
 	set -- $logoList
 	numLogos=$#
 	if [ "$numLogos" -gt 0 ]; then
-		random_index=$(date +%3N)
-		random_index=${random_index#0}
+		random_index=$(shuf -i 2000-65000 -n 1)
 		random_index=$((random_index % numLogos))
 		_logo=$(eval echo \$$((random_index + 1)))
 		_logoFinal=$_logo
@@ -240,8 +239,7 @@ GetColors() {
 	set -- $flags_list
 	num_flags=$#
 	if [ "$num_flags" -gt 0 ]; then
-		random_index=$(date +%3N)
-		random_index=${random_index#0}
+		random_index=$(shuf -i 2000-65000 -n 1)
 		random_index=$((random_index % num_flags))
 		chosen_flag=$(eval echo \$$((random_index + 1)))
 		_colors=$(awk -v flag="$chosen_flag" '

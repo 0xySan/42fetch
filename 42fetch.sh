@@ -5,6 +5,7 @@
 # Define constants
 _HOME_DIR=$(eval echo "~")
 _CONFIG_FOLDER=""
+#if you need to edit this script make sure _CONFIG_FOLDER="" stays at the line #7 as it is needed in the ./install.sh exec.
 _PROGRAM_NAME="42fetch"
 _FLAG_COLORS_FILE="./data/flag.conf"
 _LOGO_COLORS_FILE="./data/logo.conf"
@@ -38,6 +39,7 @@ _logoUsed=""
 _configFile=""
 _flag=""
 _colors=""
+_configOption=0
 
 # Manage flags
 PrintHelp() {
@@ -47,6 +49,7 @@ A simple system information tool written in shell
 With no OPTION, it will display the 42 logo with the default configuration file.
 
   -m, --min			 Makes the flag smaller if the logo supports it
+  --no-config			 Doesnt output the config file
   -l=value, --logo=value	 Specify the logo to use. ex: -l=42 would use the 42 logo
   -c=value, --config=value	 Specify the configuration file to use. ex: -c=default.cfg
   -f=value, --flag=value	 Specify the flag to use. ex: -f=pride would use the pride flag
@@ -89,7 +92,7 @@ for arg in "$@"; do
 	esac
 done
 
-TEMP=$(getopt -o hml:c:f: --long flag:,logo:,config:,help,min -- "$@") 2>/dev/null
+TEMP=$(getopt -o hml:c:f: --long flag:,logo:,config:,help,min,no-config -- "$@") 2>/dev/null
 
 if [ $? != 0 ]; then
 	for arg in "$@"; do
@@ -132,11 +135,14 @@ while true; do
 			_flag=$(echo "$2" | sed 's/^[=]//')
 			shift 2;;
 		--config)
-			_configFile="$2"
+			_configOption=1
 			shift 2;;
 		--logo)
 			_logo="$2"
 			shift 2;;
+		--no-config)
+			_configOption="1"
+			shift;;
 		--flag)
 			_flag="$2"
 			shift 2;;
@@ -364,8 +370,10 @@ PrintLogoWithCfg()
 	local logoFile="$1"
 	local cfgFile="$_configFile"
 	local maxLenght
+	local length
 	maxLenght=$(GetMaxLineLength "$logoFile")
 	local tmpCfg
+	local termSize=$(GetTerminalSizeX)
 	tmpCfg=$(mktemp)
 
 	local needed_vars=$(grep -oE '\$(user|hostmachine|lengthuh|os|kernel|uptime|packages|shell|resolution|de|terminal|cpu|gpu|memory|ip|pip|lastboot|pc|root|home)' "$cfgFile" | sort -u)
@@ -387,12 +395,12 @@ PrintLogoWithCfg()
 			"\$cpuusage") export cpu="$(GetCpuUsage)" ;;
 			"\$gpu") export gpu=$(GetGPU) ;;
 			"\$memory") export memory="$(GetUsedMemory) / $(GetFullMemory)" ;;
-			"\$ip") export ip="$(GetIpAddress)" ;;
-			"\$pip") export pip="$(GetPublicIp)" ;;
-			"\$lastboot") export lastboot="$(GetLastBoot)" ;;
-			"\$pc") export pc="$(GetProcessCount)" ;;
-			"\$root") export root="$(GetRootPartition)" ;;
-			"\$home") export home="$(GetHomePartition)" ;;
+			"\$ip") export ip=$(GetIpAddress) ;;
+			"\$pip") export pip=$(GetPublicIp) ;;
+			"\$lastboot") export lastboot=$(GetLastBoot) ;;
+			"\$pc") export pc=$(GetProcessCount) ;;
+			"\$root") export root=$(GetRootPartition) ;;
+			"\$home") export home=$(GetHomePartition) ;;
 		esac
 	done
 
@@ -423,6 +431,7 @@ PrintLogoWithCfg()
 	local colorIndex=0
 	local numColors=$#
 	while IFS= read -r logoLine; do
+		length=0
 		if IFS= read -r cfgLine <&3; then
 			if [ -n "$_flag" ] && [ -n "$_colors" ]; then
 				currentColor=$(eval echo "\$$((colorIndex + 1))")
@@ -432,7 +441,11 @@ PrintLogoWithCfg()
 				padLen=$(( maxLenght - visibleLen ))
 				[ $padLen -lt 0 ] && padLen=0
 				padding=$(printf "%*s" "$padLen" "")
-				printf "%b%s\e[0m\t%s\n" "$logoLine" "$padding" "$cfgLine"
+				if [ $_configOption -eq 0 ]; then
+					printf "%b%s\e[0m\t%s\n" "$logoLine" "$padding" "$cfgLine"
+				else
+					printf "%b%s\e[0m\t%s\n" "$logoLine" "$padding" ""
+				fi
 				colorIndex=$(( (colorIndex + 1) % numColors ))
 			else
 				ApplyColors
@@ -441,7 +454,11 @@ PrintLogoWithCfg()
 				padLen=$(( maxLenght - visibleLen ))
 				[ $padLen -lt 0 ] && padLen=0
 				padding=$(printf "%*s" "$padLen" "")
-				printf "%b%s\e[0m\t%s\n" "$logoLine" "$padding" "$cfgLine"
+				if [ $_configOption -eq 0 ]; then
+					printf "%b%s\e[0m\t%s\n" "$logoLine" "$padding" "$cfgLine"
+				else
+					printf "%b%s\e[0m\t%s\n" "$logoLine" "$padding" ""
+				fi
 			fi
 		else
 			if [ -n "$_flag" ] && [ -n "$_colors" ]; then
@@ -456,9 +473,11 @@ PrintLogoWithCfg()
 		fi
 	done < "$logoFile"
 
-	while IFS= read -r cfgLine <&3; do
-		printf "%-${maxLenght}s\t%s\n" "" "$cfgLine"
-	done
+	if [ $_configOption -eq 0 ]; then
+		while IFS= read -r cfgLine <&3; do
+			printf "%-${maxLenght}s\t%s\n" "" "$cfgLine"
+		done
+	fi
 
 	exec 3<&-
 	rm "$tmpCfg"
@@ -472,19 +491,21 @@ CommandExists()
 
 GetUser()
 {
-	who=$(whoami)
+	local who=$(whoami)
+
 	printf "$who"
 }
 
 GetHostname()
 {
-	hostname=$(CommandExists hostname && hostname || echo "Unknown")
+	local hostname=$(CommandExists hostname && hostname || echo "Unknown")
+
 	printf "$hostname"
 }
 
 GetLengthUserHost()
 {
-	length=$(GetUser)
+	local length=$(GetUser)
 	length="$length@$(GetHostname)"
 	length="${#length}"
 	for i in $(seq 1 "$length"); do
@@ -494,31 +515,31 @@ GetLengthUserHost()
 
 GetDistro()
 {
-	distro=$(CommandExists lsb_release && lsb_release -d | awk -F"\t" '{print $2}' || echo "Unavailable")
+	local distro=$(CommandExists lsb_release && lsb_release -d | awk -F"\t" '{print $2}' || echo "Unavailable")
 	printf "$distro"
 }
 
 GetHost()
 {
-	host=$(CommandExists hostnamectl && hostnamectl | grep "Hardware Model" | cut -d ':' -f2 | sed 's/^[ \t]*//' || echo "Unavailable")
+	local host=$(CommandExists hostnamectl && hostnamectl | grep "Hardware Model" | cut -d ':' -f2 | sed 's/^[ \t]*//' || echo "Unavailable")
 	printf "$host"
 }
 
 GetKernel()
 {
-	kernel=$(uname -r)
+	local kernel=$(uname -r)
 	printf "$kernel"
 }
 
 GetUptime()
 {
-	uptime=$(uptime -p | sed 's/^up //')
+	local uptime=$(uptime -p | sed 's/^up //')
 	printf "$uptime"
 }
 
 GetPackages()
 {
-	packages=""
+	local packages=""
 	if CommandExists dpkg; then
 		packages="$(dpkg --get-selections | wc -l) (dpkg)"
 	elif CommandExists dnf; then
@@ -550,8 +571,8 @@ GetPackages()
 
 GetShell()
 {
-	parentShell=$(ps -o comm= -p $(ps -o ppid= -p $$))
-	shell=""
+	local parentShell=$(ps -o comm= -p $(ps -o ppid= -p $$))
+	local shell=""
 
 	if echo "$parentShell" | grep -q "zsh"; then
 		shell=$($parentShell --version | sed 's/(.*)//')
@@ -565,14 +586,14 @@ GetShell()
 
 GetResolution()
 {
-	res=$(xrandr --current | grep '*' | awk '{gsub(/\+/,"",$2); r=int($2+0.5); print $1 " @ " r "Hz"}' | sort -t'@' -k2,2 -n -r | awk '{printf "%s%s", (NR==1 ? "" : ", "), $0}')
+	local res=$(xrandr --current | grep '*' | awk '{gsub(/\+/,"",$2); r=int($2+0.5); print $1 " @ " r "Hz"}' | sort -t'@' -k2,2 -n -r | awk '{printf "%s%s", (NR==1 ? "" : ", "), $0}')
 	
 	printf "%s\n" "$res"
 }
 
 GetDE()
 {
-	DE=""
+	local DE=""
 	if ps -e | grep -q "cinnamon-session"; then
 		DE="Cinnamon"
 	elif ps -e | grep -q "gnome-session"; then
@@ -599,24 +620,31 @@ GetDE()
 
 GetTerminal()
 {
-	parent_pid=$(ps -o ppid= -p $$)
-	grandparent_pid=$(ps -o ppid= -p $parent_pid)
-	grandparent_command=$(ps -p $grandparent_pid -o comm=)
+	local parent_pid=$(ps -o ppid= -p $$)
+	local grandparent_pid=$(ps -o ppid= -p $parent_pid)
+	local grandparent_command=$(ps -p $grandparent_pid -o comm=)
 
-	terminal="Unknow"
-	terminal="${grandparent_command%[: ]*}"
+	local terminal="Unknow"
+	local terminal="${grandparent_command%[: ]*}"
 	if [ "$grandparent_command" = "gnome-terminal-" ]; then
 		terminal="${grandparent_command%[-]*}"
 	fi
 	printf "$terminal"
 }
 
+GetTerminalSizeX()
+{
+	local termsize=$(stty size | cut -d' ' -f2-)
+
+	echo $termsize
+}
+
 GetCpu()
 {
-	cpu=""
-	cpuModel="Unknow"
-	cpuCores="$(grep ^cpu\\scores /proc/cpuinfo | uniq |  awk '{print $4}')"
-	cpuSpeed=$(grep "cpu MHz" /proc/cpuinfo | head -n 1 | awk '{print $4}')
+	local cpu=""
+	local cpuModel="Unknow"
+	local cpuCores="$(grep ^cpu\\scores /proc/cpuinfo | uniq |  awk '{print $4}')"
+	local cpuSpeed=$(grep "cpu MHz" /proc/cpuinfo | head -n 1 | awk '{print $4}')
 
 	if command -v lscpu >/dev/null 2>&1; then
 		cpuModel=$(lscpu | grep "Model name" | sed -E 's/Model name:\s+//')
@@ -624,7 +652,7 @@ GetCpu()
 		cpuModel=$(grep -m 1 "model name" /proc/cpuinfo | sed -E 's/.*: //')
 	fi
 
-	cpu=$(echo "$cpuModel" | sed -E 's/\(R\)//g; s/\(TM\)//g; s/ CPU//g; s/ [0-9]+-Core Processor//g; s/ +/ /g; s/ @.*//')
+	local cpu=$(echo "$cpuModel" | sed -E 's/\(R\)//g; s/\(TM\)//g; s/ CPU//g; s/ [0-9]+-Core Processor//g; s/ +/ /g; s/ @.*//')
 	cpu="$cpu ($cpuCores)"
 	cpu="$cpu @ $(echo "$cpuSpeed" | awk '{printf "%.1f", $1/1000}') Ghz"
 
@@ -633,8 +661,8 @@ GetCpu()
 
 GetGPU()
 {
-	gpu_info=$(lspci | grep -i vga)
-	gpu=""
+	local gpu_info=$(lspci | grep -i vga)
+	local gpu=""
 
 	while IFS= read -r line; do
 		if echo "$line" | grep -qi "AMD"; then
@@ -657,65 +685,65 @@ EOF
 
 GetFullMemory()
 {
-	memory_info=$(free -m | grep Mem)
-	total_memory=$(echo $memory_info | awk '{print $2}')
+	local memory_info=$(free -m | grep Mem)
+	local total_memory=$(echo $memory_info | awk '{print $2}')
 
 	printf "$total_memory Mib"
 }
 
 GetUsedMemory()
 {
-	memory_info=$(free -m | grep Mem)
-	used_memory=$(echo $memory_info | awk '{print $3}')
+	local memory_info=$(free -m | grep Mem)
+	local used_memory=$(echo $memory_info | awk '{print $3}')
 
 	printf "$used_memory Mib"
 }
 
 GetIpAddress()
 {
-	ipAddress=$(CommandExists hostname && (hostname -i || hostname -I) | awk '{print $1}' || echo "Unavailable")
+	local ipAddress=$(CommandExists hostname && (hostname -i || hostname -I) | awk '{print $1}' || echo "Unavailable")
 	
 	printf "$ipAddress"
 }
 
 GetPublicIp()
 {
-	publicIp=$(CommandExists curl && curl -s ifconfig.me || echo "Unavailable")
+	local publicIp=$(CommandExists curl && curl -s ifconfig.me || echo "Unavailable")
 
 	printf "$publicIp"
 }
 
 GetLastBoot()
 {
-	lastBoot=$(CommandExists who && who -b | awk '{print $3, $4}' || echo "Unavailable")
+	local lastBoot=$(CommandExists who && who -b | awk '{print $3, $4}' || echo "Unavailable")
 
 	printf "$lastBoot"
 }
 
 GetProcessCount()
 {
-	processCount=$(ps aux | wc -l)
+	local processCount=$(ps aux | wc -l)
 
 	printf "$processCount"
 }
 
 GetRootPartition()
 {
-	rootPartition=$(df -h --output=target,used,avail,pcent | grep '/ ' | awk '{print $2 " " $3 " " $4}')
+	local rootPartition=$(df -h --output=target,used,avail,pcent | grep '/ ' | awk '{print $2 " " $3 " " $4}')
 
 	echo "$rootPartition"
 }
 
 GetHomePartition()
 {
-	homePartition=$(df -h --output=target,used,avail,pcent | grep '/home' | awk '{print $2 " " $3 " " $4}')
+	local homePartition=$(df -h --output=target,used,avail,pcent | grep '/home' | awk '{print $2 " " $3 " " $4}')
 
 	echo "$homePartition"
 }
 
 GetCpuUsage()
 {
-	cpuUsage=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8 "%"}')
+	local cpuUsage=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8 "%"}')
 
 	printf "$cpuUsage"
 }

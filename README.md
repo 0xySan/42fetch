@@ -13,6 +13,8 @@ curl https://raw.githubusercontent.com/0xySan/42fetch/main/install.sh | env CURL
 	Display a help message.
 - `-c=...`, `--config=...`
 	- Specifies the path to a `.cfg` file if needed.
+- `--no-config`
+	- Disable the text from the config files.
 - `-f=...`, `--flag=...`
 	- Overrides colors with the chosen flag.
 - `-l=...`, `--logo=...`

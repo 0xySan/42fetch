@@ -53,4 +53,4 @@ if [ "$input" = "y" ] || [ "$input" = "" ] && [ ! -n "$CURL" ] ; then
 	fi
 fi
 
-printf "42fetch installed successfully!"
+printf "42fetch installed successfully!\n"
